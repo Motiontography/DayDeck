@@ -30,12 +30,12 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.title}>Settings</Text>
+        <Text style={styles.title} accessibilityRole="header">Settings</Text>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Day Schedule */}
-        <Text style={styles.sectionTitle}>Day Schedule</Text>
+        <Text style={styles.sectionTitle} accessibilityRole="header">Day Schedule</Text>
 
         <SettingRowStepper
           label="Day start time"
@@ -62,7 +62,7 @@ export default function SettingsScreen() {
         />
 
         {/* Task Defaults */}
-        <Text style={styles.sectionTitle}>Task Defaults</Text>
+        <Text style={styles.sectionTitle} accessibilityRole="header">Task Defaults</Text>
 
         <SettingRowStepper
           label="Default task duration"
@@ -93,7 +93,7 @@ export default function SettingsScreen() {
         />
 
         {/* Quiet Hours */}
-        <Text style={styles.sectionTitle}>Quiet Hours</Text>
+        <Text style={styles.sectionTitle} accessibilityRole="header">Quiet Hours</Text>
 
         <SettingRowInput
           label="Quiet hours start"
@@ -114,11 +114,11 @@ export default function SettingsScreen() {
         />
 
         {/* Carry Over */}
-        <Text style={styles.sectionTitle}>Carry Over</Text>
+        <Text style={styles.sectionTitle} accessibilityRole="header">Carry Over</Text>
 
         <View style={styles.segmentRow}>
           <Text style={styles.settingLabel}>Unfinished tasks</Text>
-          <View style={styles.segmentControl}>
+          <View style={styles.segmentControl} accessibilityRole="radiogroup" accessibilityLabel="Carry over behavior">
             {CARRY_OVER_OPTIONS.map((option) => (
               <Pressable
                 key={option.value}
@@ -145,7 +145,7 @@ export default function SettingsScreen() {
         </View>
 
         {/* About */}
-        <Text style={styles.sectionTitle}>About</Text>
+        <Text style={styles.sectionTitle} accessibilityRole="header">About</Text>
         <View style={styles.settingRow}>
           <Text style={styles.settingLabel}>Version</Text>
           <Text style={styles.settingValue}>1.0.0</Text>

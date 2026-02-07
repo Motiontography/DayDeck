@@ -66,7 +66,7 @@ export default function TasksScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Tasks</Text>
+        <Text style={styles.title} accessibilityRole="header">Tasks</Text>
       </View>
       <DaySwitcher />
 

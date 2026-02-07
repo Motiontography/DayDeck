@@ -39,7 +39,6 @@ export default function TaskCard({
     <View
       style={styles.card}
       accessibilityLabel={`Task: ${task.title}, ${task.priority} priority, ${isDone ? 'completed' : 'not completed'}`}
-      accessibilityRole="none"
     >
       <View style={styles.topRow}>
         {/* Completion checkbox */}
@@ -62,7 +61,7 @@ export default function TaskCard({
             if (hasSubtasks) setExpanded(!expanded);
           }}
           onLongPress={() => onEdit(task)}
-          accessibilityLabel={hasSubtasks ? `${task.title}. Tap to ${expanded ? 'collapse' : 'expand'} subtasks` : task.title}
+          accessibilityLabel={hasSubtasks ? `${task.title}. Tap to ${expanded ? 'collapse' : 'expand'} subtasks` : `${task.title}`}
           accessibilityHint="Long press to edit this task"
           accessibilityRole="button"
         >

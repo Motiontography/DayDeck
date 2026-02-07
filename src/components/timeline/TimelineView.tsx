@@ -297,10 +297,15 @@ export default function TimelineView() {
         animationType="slide"
         onRequestClose={() => setModalVisible(false)}
       >
-        <Pressable style={styles.modalOverlay} onPress={() => setModalVisible(false)}>
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setModalVisible(false)}
+          accessibilityLabel="Close new time block form"
+          accessibilityRole="button"
+        >
           <Pressable style={styles.modalSheet} onPress={() => {}}>
             <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>New Time Block</Text>
+            <Text style={styles.modalTitle} accessibilityRole="header">New Time Block</Text>
 
             <TextInput
               style={styles.input}
@@ -311,9 +316,10 @@ export default function TimelineView() {
               autoFocus
               returnKeyType="done"
               onSubmitEditing={handleSaveBlock}
+              accessibilityLabel="Time block title"
             />
 
-            <View style={styles.typeRow}>
+            <View style={styles.typeRow} accessibilityRole="radiogroup" accessibilityLabel="Block type">
               {typeOptions.map((opt) => (
                 <Pressable
                   key={opt.value}
@@ -322,7 +328,7 @@ export default function TimelineView() {
                     newType === opt.value && styles.typeChipActive,
                   ]}
                   onPress={() => setNewType(opt.value)}
-                  accessibilityRole="button"
+                  accessibilityRole="radio"
                   accessibilityLabel={`Block type: ${opt.label}`}
                   accessibilityState={{ selected: newType === opt.value }}
                 >

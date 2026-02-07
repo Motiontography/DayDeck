@@ -31,7 +31,7 @@ export default function DayTimelineScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.title}>Today</Text>
+        <Text style={styles.title} accessibilityRole="header">Today</Text>
         {!hasPermission && calendarEnabled && (
           <Pressable
             onPress={requestPermission}

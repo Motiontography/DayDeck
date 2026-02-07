@@ -1,3 +1,5 @@
+jest.mock('expo-notifications', () => ({}));
+
 import { isInQuietHours } from '../services/notificationService';
 
 describe('isInQuietHours', () => {
