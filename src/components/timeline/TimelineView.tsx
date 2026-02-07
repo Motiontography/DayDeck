@@ -1,11 +1,18 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { View, ScrollView, Text, Modal, TextInput, Pressable, StyleSheet } from 'react-native';
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
+import { View, Text, Modal, TextInput, Pressable, StyleSheet } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedScrollHandler,
+  useAnimatedRef,
+  scrollTo,
+} from 'react-native-reanimated';
 import { Colors, Dimensions, Defaults, Config } from '../../constants';
-import { useTimeBlockStore, useTaskStore } from '../../store';
-import { generateId, areSameDay } from '../../utils';
-import type { TimeBlock, TimeBlockType } from '../../types';
+import { useTimeBlockStore, useTaskStore, useCalendarStore } from '../../store';
+import { generateId, areSameDay, detectConflicts, hasConflict } from '../../utils';
+import type { TimeBlock, TimeBlockType, CalendarEvent } from '../../types';
 import HourMarker from './HourMarker';
-import TimeBlockCard from './TimeBlockCard';
+import DraggableTimeBlock from './DraggableTimeBlock';
+import CalendarEventCard from './CalendarEventCard';
 import CurrentTimeIndicator from './CurrentTimeIndicator';
 import QuickAddButton from './QuickAddButton';
 
@@ -24,29 +31,114 @@ function getBlockPosition(block: TimeBlock) {
   return { topOffset, height };
 }
 
+function topOffsetToDate(topOffset: number, baseDate: string): Date {
+  const totalMinutes = (topOffset / HOUR_HEIGHT) * 60;
+  const hours = Math.floor(totalMinutes / 60) + START_HOUR;
+  const minutes = Math.round(totalMinutes % 60);
+  const d = new Date(baseDate + 'T00:00:00');
+  d.setHours(hours, minutes, 0, 0);
+  return d;
+}
+
+function heightToMinutes(height: number): number {
+  return (height / HOUR_HEIGHT) * 60;
+}
+
+function getEventPosition(event: CalendarEvent) {
+  const start = new Date(event.startTime);
+  const end = new Date(event.endTime);
+  const startMinutes = (start.getHours() - START_HOUR) * 60 + start.getMinutes();
+  const endMinutes = (end.getHours() - START_HOUR) * 60 + end.getMinutes();
+  const topOffset = (startMinutes / 60) * HOUR_HEIGHT;
+  const height = ((endMinutes - startMinutes) / 60) * HOUR_HEIGHT;
+  return { topOffset, height };
+}
+
 export default function TimelineView() {
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useAnimatedRef<Animated.ScrollView>();
+  const scrollY = useSharedValue(0);
   const selectedDate = useTaskStore((s) => s.selectedDate);
   const timeBlocks = useTimeBlockStore((s) => s.timeBlocks);
   const addTimeBlock = useTimeBlockStore((s) => s.addTimeBlock);
+  const updateTimeBlock = useTimeBlockStore((s) => s.updateTimeBlock);
+  const calendarEvents = useCalendarStore((s) => s.calendarEvents);
+  const calendarEnabled = useCalendarStore((s) => s.calendarEnabled);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newType, setNewType] = useState<TimeBlockType>('task');
+  const [scrollEnabled, setScrollEnabled] = useState(true);
 
   // Filter blocks for the selected date
   const todayBlocks = timeBlocks.filter((b) => areSameDay(b.startTime, selectedDate));
+
+  // Filter calendar events for the selected date
+  const todayEvents = calendarEnabled
+    ? calendarEvents.filter((e) => areSameDay(e.startTime, selectedDate))
+    : [];
+
+  // Detect conflicts between time blocks and calendar events
+  const conflicts = useMemo(
+    () => detectConflicts(todayBlocks, todayEvents),
+    [todayBlocks, todayEvents],
+  );
 
   // Auto-scroll to current time on mount
   useEffect(() => {
     const now = new Date();
     const minutesFromStart = (now.getHours() - START_HOUR) * 60 + now.getMinutes();
-    const scrollY = Math.max(0, (minutesFromStart / 60) * HOUR_HEIGHT - 120);
+    const targetY = Math.max(0, (minutesFromStart / 60) * HOUR_HEIGHT - 120);
     const timer = setTimeout(() => {
-      scrollRef.current?.scrollTo({ y: scrollY, animated: false });
+      scrollTo(scrollRef, 0, targetY, false);
     }, 100);
     return () => clearTimeout(timer);
+  }, [scrollRef]);
+
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (e) => {
+      scrollY.value = e.contentOffset.y;
+    },
+  });
+
+  // Disable scroll while dragging/resizing a block
+  const handleDragStateChange = useCallback((isDragging: boolean) => {
+    setScrollEnabled(!isDragging);
   }, []);
+
+  // Commit a drag-to-move: compute new startTime/endTime from pixel offset
+  const handleMoveEnd = useCallback(
+    (blockId: string, newTopOffset: number) => {
+      const block = timeBlocks.find((b) => b.id === blockId);
+      if (!block) return;
+
+      const durationMs = new Date(block.endTime).getTime() - new Date(block.startTime).getTime();
+      const newStart = topOffsetToDate(newTopOffset, selectedDate);
+      const newEnd = new Date(newStart.getTime() + durationMs);
+
+      updateTimeBlock(blockId, {
+        startTime: newStart.toISOString(),
+        endTime: newEnd.toISOString(),
+      });
+    },
+    [timeBlocks, selectedDate, updateTimeBlock],
+  );
+
+  // Commit a resize: compute new endTime from pixel height
+  const handleResizeEnd = useCallback(
+    (blockId: string, newHeight: number) => {
+      const block = timeBlocks.find((b) => b.id === blockId);
+      if (!block) return;
+
+      const { topOffset } = getBlockPosition(block);
+      const newEndOffset = topOffset + newHeight;
+      const newEnd = topOffsetToDate(newEndOffset, selectedDate);
+
+      updateTimeBlock(blockId, {
+        endTime: newEnd.toISOString(),
+      });
+    },
+    [timeBlocks, selectedDate, updateTimeBlock],
+  );
 
   const handleQuickAdd = useCallback(() => {
     setNewTitle('');
@@ -60,9 +152,9 @@ export default function TimelineView() {
 
     const now = new Date();
     const startHour = now.getHours();
-    const startMinute = Math.floor(now.getMinutes() / 15) * 15; // Round to nearest 15 min
+    const startMinute = Math.floor(now.getMinutes() / 15) * 15;
 
-    const startTime = new Date(selectedDate);
+    const startTime = new Date(selectedDate + 'T00:00:00');
     startTime.setHours(startHour, startMinute, 0, 0);
 
     const endTime = new Date(startTime);
@@ -101,26 +193,50 @@ export default function TimelineView() {
 
   return (
     <View style={styles.wrapper}>
-      <ScrollView
+      <Animated.ScrollView
         ref={scrollRef}
         style={styles.scroll}
         contentContainerStyle={[styles.content, { height: totalHeight + 40 }]}
         showsVerticalScrollIndicator={false}
+        scrollEnabled={scrollEnabled}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
       >
         {/* Hour grid */}
         {Array.from({ length: TOTAL_HOURS }, (_, i) => (
           <HourMarker key={START_HOUR + i} hour={START_HOUR + i} />
         ))}
 
-        {/* Time blocks */}
+        {/* Time blocks (draggable) */}
         {todayBlocks.map((block) => {
           const { topOffset, height } = getBlockPosition(block);
           return (
-            <TimeBlockCard
+            <DraggableTimeBlock
               key={block.id}
               block={block}
               topOffset={topOffset}
               height={height}
+              hasConflict={hasConflict(block.id, conflicts)}
+              onMoveEnd={handleMoveEnd}
+              onResizeEnd={handleResizeEnd}
+              onDragStateChange={handleDragStateChange}
+            />
+          );
+        })}
+
+        {/* Calendar events (read-only overlay) */}
+        {todayEvents.map((event) => {
+          const { topOffset, height } = getEventPosition(event);
+          const eventHasConflict = conflicts.some(
+            (c) => c.calendarEventId === event.id,
+          );
+          return (
+            <CalendarEventCard
+              key={`cal-${event.id}`}
+              event={event}
+              topOffset={topOffset}
+              height={height}
+              hasConflict={eventHasConflict}
             />
           );
         })}
@@ -137,7 +253,7 @@ export default function TimelineView() {
             </Text>
           </View>
         )}
-      </ScrollView>
+      </Animated.ScrollView>
 
       <QuickAddButton onPress={handleQuickAdd} />
 
@@ -216,7 +332,7 @@ const styles = StyleSheet.create({
   },
   emptyState: {
     position: 'absolute',
-    top: 4 * HOUR_HEIGHT, // Center-ish in the view
+    top: 4 * HOUR_HEIGHT,
     left: Dimensions.timelineLeftGutter + 16,
     right: Dimensions.screenPadding + 16,
     alignItems: 'center',
@@ -232,7 +348,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
     textAlign: 'center',
   },
-  // Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',
