@@ -2,14 +2,15 @@ import { useEffect, useState } from 'react';
 import * as SQLite from 'expo-sqlite';
 import { initDatabase } from '../db/schema';
 import { Config } from '../constants';
-import { useTaskStore } from '../store';
+import { useTaskStore, useSettingsStore } from '../store';
 
 let dbInstance: SQLite.SQLiteDatabase | null = null;
 
 export function useDatabase() {
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const hydrateFromDb = useTaskStore((s) => s.hydrateFromDb);
+  const hydrateTasksFromDb = useTaskStore((s) => s.hydrateFromDb);
+  const hydrateSettingsFromDb = useSettingsStore((s) => s.hydrateFromDb);
 
   useEffect(() => {
     async function setup() {
@@ -18,14 +19,17 @@ export function useDatabase() {
           dbInstance = await SQLite.openDatabaseAsync(Config.dbName);
           await initDatabase(dbInstance);
         }
-        await hydrateFromDb(dbInstance);
+        await Promise.all([
+          hydrateTasksFromDb(dbInstance),
+          hydrateSettingsFromDb(dbInstance),
+        ]);
         setIsReady(true);
       } catch (err) {
         setError(err instanceof Error ? err : new Error(String(err)));
       }
     }
     setup();
-  }, [hydrateFromDb]);
+  }, [hydrateTasksFromDb, hydrateSettingsFromDb]);
 
   return { db: dbInstance, isReady, error };
 }

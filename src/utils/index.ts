@@ -10,3 +10,5 @@ export {
 } from './dateHelpers';
 export { generateId } from './idGenerator';
 export { generateNextOccurrence, generateOccurrences } from './recurrenceEngine';
+export { detectConflicts, hasConflict, getConflictingEventIds } from './conflictDetection';
+export type { Conflict } from './conflictDetection';
