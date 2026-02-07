@@ -1,9 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet } from 'react-native';
-import { Colors, Dimensions } from '../../constants';
+import { View, Text, StyleSheet } from 'react-native';
+import { Dimensions } from '../../constants';
 
 interface CurrentTimeIndicatorProps {
   startHour: number;
+}
+
+function formatTime(date: Date): string {
+  const h = date.getHours();
+  const m = date.getMinutes();
+  const suffix = h >= 12 ? 'PM' : 'AM';
+  const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${hour12}:${m.toString().padStart(2, '0')} ${suffix}`;
 }
 
 export default function CurrentTimeIndicator({ startHour }: CurrentTimeIndicatorProps) {
@@ -26,6 +34,9 @@ export default function CurrentTimeIndicator({ startHour }: CurrentTimeIndicator
       accessible={false}
       importantForAccessibility="no-hide-descendants"
     >
+      <View style={styles.timePill}>
+        <Text style={styles.timePillText}>{formatTime(now)}</Text>
+      </View>
       <View style={styles.dot} />
       <View style={styles.line} />
     </View>
@@ -35,21 +46,46 @@ export default function CurrentTimeIndicator({ startHour }: CurrentTimeIndicator
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    left: Dimensions.timelineLeftGutter - 4,
+    left: 0,
     right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     zIndex: 10,
   },
+  timePill: {
+    backgroundColor: '#EF4444',
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginRight: -4,
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  timePillText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
+  },
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.error,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#EF4444',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
   },
   line: {
     flex: 1,
-    height: 2,
-    backgroundColor: Colors.error,
+    height: 2.5,
+    backgroundColor: '#EF4444',
+    opacity: 0.8,
   },
 });

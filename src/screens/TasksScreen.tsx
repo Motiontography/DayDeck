@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Dimensions } from '../constants';
 import { useTaskStore } from '../store';
@@ -37,10 +37,7 @@ export default function TasksScreen() {
 
   const handleDelete = useCallback(
     (taskId: string) => {
-      Alert.alert('Delete Task', 'Are you sure you want to delete this task?', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => deleteTask(taskId) },
-      ]);
+      deleteTask(taskId);
     },
     [deleteTask]
   );
@@ -123,22 +120,22 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 24,
     right: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
+    elevation: 6,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
   },
   fabIcon: {
-    fontSize: 28,
+    fontSize: 30,
     color: '#FFFFFF',
     fontWeight: '300',
-    lineHeight: 30,
+    lineHeight: 32,
   },
 });

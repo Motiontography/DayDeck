@@ -9,19 +9,26 @@ import Animated, {
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { Colors, Dimensions } from '../../constants';
-import type { TimeBlock } from '../../types';
+import type { TimeBlock, TimeBlockType } from '../../types';
 
 const HOUR_HEIGHT = Dimensions.timelineHourHeight;
 const SNAP_MINUTES = 15;
 const SNAP_PX = (SNAP_MINUTES / 60) * HOUR_HEIGHT; // 15px per 15-min snap
 const MIN_DURATION_MINUTES = 15;
 const MIN_HEIGHT = (MIN_DURATION_MINUTES / 60) * HOUR_HEIGHT;
-const RESIZE_HANDLE_HEIGHT = 12;
+const RESIZE_HANDLE_HEIGHT = 14;
 
 const SPRING_CONFIG = {
   damping: 20,
   stiffness: 200,
   mass: 0.5,
+};
+
+const TYPE_ICONS: Record<TimeBlockType, string> = {
+  task: '\u2611',
+  focus: '\u26A1',
+  event: '\u{1F4C5}',
+  break: '\u2615',
 };
 
 interface DraggableTimeBlockProps {
@@ -35,6 +42,7 @@ interface DraggableTimeBlockProps {
   onDragStateChange: (isDragging: boolean) => void;
   onMoveUp?: (blockId: string) => void;
   onMoveDown?: (blockId: string) => void;
+  onPress?: (block: TimeBlock) => void;
 }
 
 function snapToGrid(value: number): number {
@@ -63,7 +71,15 @@ function formatTimeRange(startTime: string, endTime: string): string {
     const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
     return m === 0 ? `${hour12} ${suffix}` : `${hour12}:${m.toString().padStart(2, '0')} ${suffix}`;
   };
-  return `${fmt(start)} to ${fmt(end)}`;
+  return `${fmt(start)} \u2013 ${fmt(end)}`;
+}
+
+function getDurationLabel(startTime: string, endTime: string): string {
+  const dur = (new Date(endTime).getTime() - new Date(startTime).getTime()) / 60000;
+  if (dur < 60) return `${Math.round(dur)}m`;
+  const h = Math.floor(dur / 60);
+  const m = Math.round(dur % 60);
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
 function DraggableTimeBlock({
@@ -77,12 +93,15 @@ function DraggableTimeBlock({
   onDragStateChange,
   onMoveUp,
   onMoveDown,
+  onPress,
 }: DraggableTimeBlockProps) {
   const blockColor = block.color || Colors.timeBlockTask;
-  const minDisplayHeight = 28;
+  const minDisplayHeight = 52;
   const displayHeight = Math.max(height, minDisplayHeight);
-  const isCompact = height < 40;
+  const isCompact = height < 52;
+  const isTall = height >= 80;
   const [isFocused, setIsFocused] = useState(false);
+  const typeIcon = TYPE_ICONS[block.type] || '\u2611';
 
   // Shared values for drag (move) gesture
   const translateY = useSharedValue(0);
@@ -92,6 +111,9 @@ function DraggableTimeBlock({
   // Shared values for resize gesture
   const resizeDelta = useSharedValue(0);
   const isResizing = useSharedValue(false);
+
+  // Track if a drag actually happened (to distinguish tap from drag)
+  const didDrag = useSharedValue(false);
 
   const triggerHapticStart = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -127,12 +149,20 @@ function DraggableTimeBlock({
     [block.id, displayHeight, topOffset, totalHeight, onResizeEnd],
   );
 
+  const handleTap = useCallback(() => {
+    if (onPress) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      onPress(block);
+    }
+  }, [onPress, block]);
+
   // Drag gesture: long-press to activate, then pan to move
   const dragGesture = Gesture.Pan()
     .activateAfterLongPress(250)
     .onStart(() => {
       'worklet';
       isDragging.value = true;
+      didDrag.value = true;
       dragScale.value = withSpring(1.03, SPRING_CONFIG);
       runOnJS(triggerHapticStart)();
       runOnJS(notifyDragStart)();
@@ -155,6 +185,22 @@ function DraggableTimeBlock({
       translateY.value = withSpring(0, SPRING_CONFIG);
       runOnJS(notifyDragEnd)();
     });
+
+  // Tap gesture for opening edit sheet
+  const tapGesture = Gesture.Tap()
+    .onStart(() => {
+      'worklet';
+      didDrag.value = false;
+    })
+    .onEnd(() => {
+      'worklet';
+      if (!didDrag.value) {
+        runOnJS(handleTap)();
+      }
+    });
+
+  // Compose gestures: tap is simultaneous, drag is exclusive
+  const composedGesture = Gesture.Simultaneous(tapGesture, dragGesture);
 
   // Resize gesture on the bottom handle
   const resizeGesture = Gesture.Pan()
@@ -191,20 +237,20 @@ function DraggableTimeBlock({
       ],
       height: isResizing.value ? clampedHeight : displayHeight,
       zIndex: isDragging.value || isResizing.value ? 100 : 1,
-      shadowOpacity: isDragging.value ? 0.3 : 0.08,
-      elevation: isDragging.value ? 8 : 2,
+      shadowOpacity: isDragging.value ? 0.25 : 0.1,
+      elevation: isDragging.value ? 8 : 3,
     };
   });
 
   return (
-    <GestureDetector gesture={dragGesture}>
+    <GestureDetector gesture={composedGesture}>
       <Animated.View
         style={[
           styles.container,
           {
             top: topOffset,
             height: displayHeight,
-            backgroundColor: blockColor + '1A',
+            backgroundColor: blockColor + '28',
             borderLeftColor: blockColor,
           },
           blockHasConflict && styles.conflictBorder,
@@ -212,7 +258,7 @@ function DraggableTimeBlock({
         ]}
         accessible
         accessibilityRole="button"
-        accessibilityLabel={`${block.title}, ${formatTimeRange(block.startTime, block.endTime)}${blockHasConflict ? ', conflicts with a calendar event' : ''}. Long press to drag, drag bottom edge to resize.`}
+        accessibilityLabel={`${block.title}, ${formatTimeRange(block.startTime, block.endTime)}${blockHasConflict ? ', conflicts with a calendar event' : ''}. Tap to edit. Long press to drag, drag bottom edge to resize.`}
         onAccessibilityEscape={() => setIsFocused(false)}
         onAccessibilityAction={(event) => {
           if (event.nativeEvent.actionName === 'activate') {
@@ -221,14 +267,33 @@ function DraggableTimeBlock({
         }}
         accessibilityActions={[{ name: 'activate', label: 'Toggle move controls' }]}
       >
-        <Text style={[styles.title, isCompact && styles.titleCompact]} numberOfLines={1}>
-          {block.title}
-        </Text>
-        {!isCompact && (
-          <Text style={styles.time} numberOfLines={1}>
-            {formatTimeRange(block.startTime, block.endTime)}
-          </Text>
-        )}
+        {/* Colored accent bar at top */}
+        <View style={[styles.accentBar, { backgroundColor: blockColor }]} />
+
+        <View style={styles.contentRow}>
+          <View style={[styles.iconBubble, { backgroundColor: blockColor + '30' }]}>
+            <Text style={styles.typeIconText}>{typeIcon}</Text>
+          </View>
+          <View style={styles.textContent}>
+            <Text style={[styles.title, isCompact && styles.titleCompact]} numberOfLines={1}>
+              {block.title}
+            </Text>
+            {!isCompact && (
+              <View style={styles.timeRow}>
+                <Text style={[styles.time, { color: blockColor }]} numberOfLines={1}>
+                  {formatTimeRange(block.startTime, block.endTime)}
+                </Text>
+                {isTall && (
+                  <View style={[styles.durationPill, { backgroundColor: blockColor + '20' }]}>
+                    <Text style={[styles.durationText, { color: blockColor }]}>
+                      {getDurationLabel(block.startTime, block.endTime)}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+        </View>
 
         {/* Accessibility: Move up / Move down buttons (non-gesture alternative) */}
         {isFocused && (onMoveUp || onMoveDown) && (
@@ -283,32 +348,76 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: Dimensions.timelineLeftGutter + 4,
     right: Dimensions.screenPadding,
-    borderLeftWidth: 3,
-    borderRadius: Dimensions.radiusSmall,
-    paddingHorizontal: 8,
-    paddingTop: 4,
+    borderLeftWidth: 5,
+    borderRadius: 14,
+    paddingHorizontal: 10,
+    paddingTop: 10,
     paddingBottom: RESIZE_HANDLE_HEIGHT + 2,
     justifyContent: 'flex-start',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 8,
+    overflow: 'hidden',
+  },
+  accentBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    opacity: 0.6,
   },
   conflictBorder: {
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: Colors.warning,
   },
+  contentRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  iconBubble: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+  },
+  typeIconText: {
+    fontSize: 14,
+  },
+  textContent: {
+    flex: 1,
+  },
   title: {
-    fontSize: Dimensions.fontSM,
-    fontWeight: '600',
+    fontSize: Dimensions.fontMD,
+    fontWeight: '700',
     color: Colors.text,
+    letterSpacing: -0.2,
   },
   titleCompact: {
-    fontSize: Dimensions.fontXS,
+    fontSize: Dimensions.fontSM,
+  },
+  timeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 3,
   },
   time: {
     fontSize: Dimensions.fontXS,
-    color: Colors.textSecondary,
-    marginTop: 2,
+    fontWeight: '600',
+    letterSpacing: 0.1,
+  },
+  durationPill: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 6,
+  },
+  durationText: {
+    fontSize: 10,
+    fontWeight: '700',
   },
   resizeHandle: {
     position: 'absolute',
@@ -320,10 +429,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   resizeBar: {
-    width: 24,
-    height: 3,
-    borderRadius: 1.5,
-    opacity: 0.5,
+    width: 30,
+    height: 3.5,
+    borderRadius: 2,
+    opacity: 0.45,
   },
   moveButtonRow: {
     flexDirection: 'row',

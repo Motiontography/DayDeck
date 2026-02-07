@@ -17,15 +17,19 @@ import ErrorBoundary from './src/components/common/ErrorBoundary';
 const Tab = createBottomTabNavigator();
 
 function TabIcon({ label, focused }: { label: string; focused: boolean }) {
-  const icons: Record<string, string> = {
-    Today: 'T',
-    Tasks: 'L',
-    Settings: 'S',
+  const icons: Record<string, { active: string; inactive: string }> = {
+    Today: { active: '\u{1F4C5}', inactive: '\u{1F5D3}' },
+    Tasks: { active: '\u2611\uFE0F', inactive: '\u{1F4CB}' },
+    Settings: { active: '\u2699\uFE0F', inactive: '\u2699' },
   };
+  const iconSet = icons[label];
+  const icon = iconSet ? (focused ? iconSet.active : iconSet.inactive) : '-';
   return (
-    <Text style={[styles.tabIcon, focused && styles.tabIconFocused]}>
-      {icons[label] ?? '-'}
-    </Text>
+    <View style={[styles.tabIconWrap, focused && styles.tabIconWrapFocused]}>
+      <Text style={[styles.tabIcon, focused && styles.tabIconFocused]}>
+        {icon}
+      </Text>
+    </View>
   );
 }
 
@@ -54,7 +58,8 @@ export default function App() {
               tabBarIcon: ({ focused }) => <TabIcon label={route.name} focused={focused} />,
               tabBarActiveTintColor: Colors.primary,
               tabBarInactiveTintColor: Colors.textTertiary,
-              tabBarStyle: { height: Dimensions.tabBarHeight, paddingBottom: 8, paddingTop: 8 },
+              tabBarStyle: styles.tabBar,
+              tabBarLabelStyle: styles.tabBarLabel,
               headerShown: false,
             })}
           >
@@ -76,7 +81,7 @@ export default function App() {
           </Tab.Navigator>
         </NavigationContainer>
         </ErrorBoundary>
-        <StatusBar style="auto" />
+        <StatusBar style="dark" />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
@@ -86,13 +91,42 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
   },
+  tabIconWrap: {
+    width: 36,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabIconWrapFocused: {
+    backgroundColor: Colors.primaryMuted,
+  },
   tabIcon: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 20,
     color: Colors.textTertiary,
   },
   tabIconFocused: {
     color: Colors.primary,
+    fontSize: 22,
+  },
+  tabBar: {
+    height: Dimensions.tabBarHeight + 4,
+    paddingBottom: 10,
+    paddingTop: 8,
+    backgroundColor: Colors.surface,
+    borderTopWidth: 0,
+    borderTopColor: 'transparent',
+    elevation: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+  },
+  tabBarLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+    marginTop: 2,
   },
   loading: {
     flex: 1,

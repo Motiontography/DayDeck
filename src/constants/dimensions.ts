@@ -1,6 +1,6 @@
 export const Dimensions = {
   // Timeline
-  timelineHourHeight: 60,
+  timelineHourHeight: 80,
   timelineLeftGutter: 56,
   timelineStartHour: 6,
   timelineEndHour: 22,
