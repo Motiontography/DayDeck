@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { Colors, Dimensions } from '../../constants';
 import type { Task } from '../../types';
 import PriorityBadge from './PriorityBadge';
@@ -27,6 +28,13 @@ export default function TaskCard({
   const hasSubtasks = task.subtasks.length > 0;
   const completedSubtasks = task.subtasks.filter((s) => s.completed).length;
 
+  const handleToggleStatus = useCallback(() => {
+    Haptics.impactAsync(
+      isDone ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium,
+    );
+    onToggleStatus(task.id);
+  }, [isDone, onToggleStatus, task.id]);
+
   return (
     <View
       style={styles.card}
@@ -36,7 +44,7 @@ export default function TaskCard({
       <View style={styles.topRow}>
         {/* Completion checkbox */}
         <Pressable
-          onPress={() => onToggleStatus(task.id)}
+          onPress={handleToggleStatus}
           style={styles.checkboxHitArea}
           accessibilityRole="checkbox"
           accessibilityState={{ checked: isDone }}

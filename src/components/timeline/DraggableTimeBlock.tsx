@@ -8,7 +8,7 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { Colors, Dimensions, Defaults } from '../../constants';
+import { Colors, Dimensions } from '../../constants';
 import type { TimeBlock } from '../../types';
 
 const HOUR_HEIGHT = Dimensions.timelineHourHeight;
@@ -16,9 +16,6 @@ const SNAP_MINUTES = 15;
 const SNAP_PX = (SNAP_MINUTES / 60) * HOUR_HEIGHT; // 15px per 15-min snap
 const MIN_DURATION_MINUTES = 15;
 const MIN_HEIGHT = (MIN_DURATION_MINUTES / 60) * HOUR_HEIGHT;
-const START_HOUR = Defaults.dayStartHour;
-const END_HOUR = Defaults.dayEndHour;
-const TOTAL_HEIGHT = (END_HOUR - START_HOUR) * HOUR_HEIGHT;
 const RESIZE_HANDLE_HEIGHT = 12;
 
 const SPRING_CONFIG = {
@@ -31,6 +28,7 @@ interface DraggableTimeBlockProps {
   block: TimeBlock;
   topOffset: number;
   height: number;
+  timelineHeight?: number;
   hasConflict?: boolean;
   onMoveEnd: (blockId: string, newTopOffset: number) => void;
   onResizeEnd: (blockId: string, newHeight: number) => void;
@@ -44,14 +42,14 @@ function snapToGrid(value: number): number {
   return Math.round(value / SNAP_PX) * SNAP_PX;
 }
 
-function clampTop(top: number, blockHeight: number): number {
+function clampTop(top: number, blockHeight: number, totalHeight: number): number {
   'worklet';
-  return Math.max(0, Math.min(top, TOTAL_HEIGHT - blockHeight));
+  return Math.max(0, Math.min(top, totalHeight - blockHeight));
 }
 
-function clampHeight(h: number, currentTop: number): number {
+function clampHeight(h: number, currentTop: number, totalHeight: number): number {
   'worklet';
-  const maxH = TOTAL_HEIGHT - currentTop;
+  const maxH = totalHeight - currentTop;
   return Math.max(MIN_HEIGHT, Math.min(h, maxH));
 }
 
@@ -73,6 +71,7 @@ function DraggableTimeBlock({
   topOffset,
   height,
   hasConflict: blockHasConflict = false,
+  timelineHeight: totalHeight = 16 * HOUR_HEIGHT,
   onMoveEnd,
   onResizeEnd,
   onDragStateChange,
@@ -113,19 +112,19 @@ function DraggableTimeBlock({
   const commitMove = useCallback(
     (finalTranslateY: number) => {
       const newTop = snapToGrid(topOffset + finalTranslateY);
-      const clamped = clampTop(newTop, displayHeight);
+      const clamped = clampTop(newTop, displayHeight, totalHeight);
       onMoveEnd(block.id, clamped);
     },
-    [block.id, topOffset, displayHeight, onMoveEnd],
+    [block.id, topOffset, displayHeight, totalHeight, onMoveEnd],
   );
 
   const commitResize = useCallback(
     (delta: number) => {
       const newHeight = snapToGrid(displayHeight + delta);
-      const clamped = clampHeight(newHeight, topOffset);
+      const clamped = clampHeight(newHeight, topOffset, totalHeight);
       onResizeEnd(block.id, clamped);
     },
-    [block.id, displayHeight, topOffset, onResizeEnd],
+    [block.id, displayHeight, topOffset, totalHeight, onResizeEnd],
   );
 
   // Drag gesture: long-press to activate, then pan to move

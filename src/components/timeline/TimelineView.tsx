@@ -6,7 +6,7 @@ import Animated, {
   useAnimatedRef,
   scrollTo,
 } from 'react-native-reanimated';
-import { Colors, Dimensions, Config } from '../../constants';
+import { Colors, Dimensions } from '../../constants';
 import { useTimeBlockStore, useTaskStore, useCalendarStore, useSettingsStore } from '../../store';
 import { generateId, areSameDay, detectConflicts, hasConflict } from '../../utils';
 import type { TimeBlock, TimeBlockType, CalendarEvent } from '../../types';
@@ -103,7 +103,7 @@ export default function TimelineView() {
     setScrollEnabled(!isDragging);
   }, []);
 
-  // Commit a drag-to-move: compute new startTime/endTime from pixel offset
+  // Commit a drag-to-move: compute new startTime/endTime from pixel offset, resolve overlaps
   const handleMoveEnd = useCallback(
     (blockId: string, newTopOffset: number) => {
       const block = timeBlocks.find((b) => b.id === blockId);
@@ -113,12 +113,9 @@ export default function TimelineView() {
       const newStart = topOffsetToDate(newTopOffset, selectedDate, dayStartHour);
       const newEnd = new Date(newStart.getTime() + durationMs);
 
-      updateTimeBlock(blockId, {
-        startTime: newStart.toISOString(),
-        endTime: newEnd.toISOString(),
-      });
+      moveTimeBlock(blockId, newStart.toISOString(), newEnd.toISOString());
     },
-    [timeBlocks, selectedDate, updateTimeBlock, dayStartHour],
+    [timeBlocks, selectedDate, moveTimeBlock, dayStartHour],
   );
 
   // Commit a resize: compute new endTime from pixel height
@@ -136,6 +133,37 @@ export default function TimelineView() {
       });
     },
     [timeBlocks, selectedDate, updateTimeBlock, dayStartHour],
+  );
+
+  // Accessibility: move block up/down by 15 minutes (non-gesture alternative)
+  const STEP_MINUTES = 15;
+
+  const handleMoveUp = useCallback(
+    (blockId: string) => {
+      const block = timeBlocks.find((b) => b.id === blockId);
+      if (!block) return;
+      const newStart = new Date(block.startTime);
+      const newEnd = new Date(block.endTime);
+      newStart.setMinutes(newStart.getMinutes() - STEP_MINUTES);
+      newEnd.setMinutes(newEnd.getMinutes() - STEP_MINUTES);
+      if (newStart.getHours() < dayStartHour) return;
+      moveTimeBlock(blockId, newStart.toISOString(), newEnd.toISOString());
+    },
+    [timeBlocks, dayStartHour, moveTimeBlock],
+  );
+
+  const handleMoveDown = useCallback(
+    (blockId: string) => {
+      const block = timeBlocks.find((b) => b.id === blockId);
+      if (!block) return;
+      const newStart = new Date(block.startTime);
+      const newEnd = new Date(block.endTime);
+      newStart.setMinutes(newStart.getMinutes() + STEP_MINUTES);
+      newEnd.setMinutes(newEnd.getMinutes() + STEP_MINUTES);
+      if (newEnd.getHours() >= dayEndHour && newEnd.getMinutes() > 0) return;
+      moveTimeBlock(blockId, newStart.toISOString(), newEnd.toISOString());
+    },
+    [timeBlocks, dayEndHour, moveTimeBlock],
   );
 
   const handleQuickAdd = useCallback(() => {
@@ -214,10 +242,13 @@ export default function TimelineView() {
               block={block}
               topOffset={topOffset}
               height={height}
+              timelineHeight={totalHeight}
               hasConflict={hasConflict(block.id, conflicts)}
               onMoveEnd={handleMoveEnd}
               onResizeEnd={handleResizeEnd}
               onDragStateChange={handleDragStateChange}
+              onMoveUp={handleMoveUp}
+              onMoveDown={handleMoveDown}
             />
           );
         })}

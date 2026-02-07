@@ -7,11 +7,11 @@ interface PriorityBadgeProps {
   priority: Priority;
 }
 
-const PRIORITY_CONFIG: Record<Priority, { color: string; label: string }> = {
-  low: { color: Colors.priorityLow, label: 'Low priority' },
-  medium: { color: Colors.priorityMedium, label: 'Medium priority' },
-  high: { color: Colors.priorityHigh, label: 'High priority' },
-  urgent: { color: Colors.priorityUrgent, label: 'Urgent priority' },
+const PRIORITY_CONFIG: Record<Priority, { color: string; textColor: string; label: string }> = {
+  low: { color: Colors.priorityLow, textColor: '#FFFFFF', label: 'Low priority' },
+  medium: { color: Colors.priorityMedium, textColor: '#78350F', label: 'Medium priority' },
+  high: { color: Colors.priorityHigh, textColor: '#FFFFFF', label: 'High priority' },
+  urgent: { color: Colors.priorityUrgent, textColor: '#FFFFFF', label: 'Urgent priority' },
 };
 
 export default function PriorityBadge({ priority }: PriorityBadgeProps) {
@@ -23,7 +23,7 @@ export default function PriorityBadge({ priority }: PriorityBadgeProps) {
       accessibilityLabel={config.label}
       accessibilityRole="text"
     >
-      <Text style={styles.label}>
+      <Text style={[styles.label, { color: config.textColor }]}>
         {priority.charAt(0).toUpperCase() + priority.slice(1)}
       </Text>
     </View>
@@ -40,6 +40,5 @@ const styles = StyleSheet.create({
   label: {
     fontSize: Dimensions.fontXS,
     fontWeight: '600',
-    color: '#FFFFFF',
   },
 });

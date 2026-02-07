@@ -10,9 +10,10 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { Colors, Dimensions, Config } from '../../constants';
+import { Colors, Dimensions } from '../../constants';
 import type { Task, Priority, Recurrence, RecurrenceFrequency } from '../../types';
 import { generateId, todayISO } from '../../utils';
+import { useSettingsStore } from '../../store';
 
 interface TaskFormProps {
   visible: boolean;
@@ -32,6 +33,13 @@ const PRIORITY_COLORS: Record<Priority, string> = {
   urgent: Colors.priorityUrgent,
 };
 
+const PRIORITY_TEXT_COLORS: Record<Priority, string> = {
+  low: '#FFFFFF',
+  medium: '#78350F', // dark brown for contrast on amber
+  high: '#FFFFFF',
+  urgent: '#FFFFFF',
+};
+
 export default function TaskForm({
   visible,
   onClose,
@@ -39,12 +47,14 @@ export default function TaskForm({
   onUpdate,
   editingTask,
 }: TaskFormProps) {
+  const defaultDuration = useSettingsStore((s) => s.defaultTaskDurationMinutes);
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<Priority>('medium');
   const [scheduledDate, setScheduledDate] = useState(todayISO());
   const [estimatedMinutes, setEstimatedMinutes] = useState(
-    Config.defaultTaskDuration.toString()
+    defaultDuration.toString()
   );
   const [hasRecurrence, setHasRecurrence] = useState(false);
   const [frequency, setFrequency] = useState<RecurrenceFrequency>('daily');
@@ -58,7 +68,7 @@ export default function TaskForm({
       setPriority(editingTask.priority);
       setScheduledDate(editingTask.scheduledDate);
       setEstimatedMinutes(
-        editingTask.estimatedMinutes?.toString() || Config.defaultTaskDuration.toString()
+        editingTask.estimatedMinutes?.toString() || defaultDuration.toString()
       );
       if (editingTask.recurrence) {
         setHasRecurrence(true);
@@ -74,7 +84,7 @@ export default function TaskForm({
       setDescription('');
       setPriority('medium');
       setScheduledDate(todayISO());
-      setEstimatedMinutes(Config.defaultTaskDuration.toString());
+      setEstimatedMinutes(defaultDuration.toString());
       setHasRecurrence(false);
       setFrequency('daily');
       setInterval('1');
@@ -135,7 +145,7 @@ export default function TaskForm({
       >
         {/* Header */}
         <View style={styles.header}>
-          <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Cancel">
+          <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Cancel" style={styles.headerButton}>
             <Text style={styles.cancelText}>Cancel</Text>
           </Pressable>
           <Text style={styles.headerTitle}>
@@ -145,6 +155,7 @@ export default function TaskForm({
             onPress={handleSubmit}
             accessibilityRole="button"
             accessibilityLabel={editingTask ? 'Save task' : 'Add task'}
+            style={styles.headerButton}
           >
             <Text style={[styles.saveText, !title.trim() && styles.saveTextDisabled]}>
               {editingTask ? 'Save' : 'Add'}
@@ -197,7 +208,7 @@ export default function TaskForm({
                 <Text
                   style={[
                     styles.priorityButtonText,
-                    priority === p && styles.priorityButtonTextSelected,
+                    priority === p && { color: PRIORITY_TEXT_COLORS[p] },
                   ]}
                 >
                   {p.charAt(0).toUpperCase() + p.slice(1)}
@@ -306,6 +317,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
+  headerButton: {
+    minHeight: 44,
+    minWidth: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   headerTitle: {
     fontSize: Dimensions.fontLG,
     fontWeight: '600',
@@ -362,7 +379,8 @@ const styles = StyleSheet.create({
   },
   priorityButton: {
     flex: 1,
-    paddingVertical: 8,
+    minHeight: 44,
+    justifyContent: 'center',
     borderRadius: Dimensions.radiusSmall,
     borderWidth: 2,
     alignItems: 'center',
@@ -371,9 +389,6 @@ const styles = StyleSheet.create({
     fontSize: Dimensions.fontSM,
     fontWeight: '600',
     color: Colors.text,
-  },
-  priorityButtonTextSelected: {
-    color: '#FFFFFF',
   },
   toggleRow: {
     flexDirection: 'row',
@@ -414,7 +429,8 @@ const styles = StyleSheet.create({
   },
   frequencyButton: {
     flex: 1,
-    paddingVertical: 8,
+    minHeight: 44,
+    justifyContent: 'center',
     borderRadius: Dimensions.radiusSmall,
     borderWidth: 1,
     borderColor: Colors.border,

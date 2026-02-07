@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 6,
+    minHeight: 44,
     marginHorizontal: 8,
   },
   dateText: {

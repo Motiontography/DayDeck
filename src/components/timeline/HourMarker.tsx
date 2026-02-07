@@ -24,7 +24,7 @@ function HourMarker({ hour }: HourMarkerProps) {
       >
         {label}
       </Text>
-      <View style={styles.line} />
+      <View style={styles.line} importantForAccessibility="no-hide-descendants" />
     </View>
   );
 }

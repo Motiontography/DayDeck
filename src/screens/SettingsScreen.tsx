@@ -286,9 +286,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   stepperButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: Colors.surfaceSecondary,
     justifyContent: 'center',
     alignItems: 'center',
@@ -319,7 +319,8 @@ const styles = StyleSheet.create({
   },
   segmentButton: {
     flex: 1,
-    paddingVertical: 8,
+    minHeight: 44,
+    justifyContent: 'center',
     borderRadius: Dimensions.radiusSmall,
     backgroundColor: Colors.surfaceSecondary,
     alignItems: 'center',

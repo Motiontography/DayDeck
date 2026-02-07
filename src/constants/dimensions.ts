@@ -16,7 +16,7 @@ export const Dimensions = {
   radiusLarge: 16,
 
   // Font sizes
-  fontXS: 10,
+  fontXS: 11,
   fontSM: 12,
   fontMD: 14,
   fontLG: 16,
