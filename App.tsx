@@ -5,12 +5,13 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import DayTimelineScreen from './src/screens/DayTimelineScreen';
 import TasksScreen from './src/screens/TasksScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import { Colors } from './src/constants/colors';
 import { Dimensions } from './src/constants/dimensions';
+import { useDatabase } from './src/hooks/useDatabase';
 
 const Tab = createBottomTabNavigator();
 
@@ -28,6 +29,20 @@ function TabIcon({ label, focused }: { label: string; focused: boolean }) {
 }
 
 export default function App() {
+  const { isReady, error } = useDatabase();
+
+  if (!isReady) {
+    return (
+      <View style={styles.loading}>
+        {error ? (
+          <Text style={styles.errorText}>Failed to load database: {error.message}</Text>
+        ) : (
+          <ActivityIndicator size="large" color={Colors.primary} />
+        )}
+      </View>
+    );
+  }
+
   return (
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
@@ -63,5 +78,17 @@ const styles = StyleSheet.create({
   },
   tabIconFocused: {
     color: Colors.primary,
+  },
+  loading: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.background,
+  },
+  errorText: {
+    color: Colors.error,
+    fontSize: Dimensions.fontMD,
+    textAlign: 'center',
+    padding: Dimensions.screenPadding,
   },
 });
