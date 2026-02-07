@@ -101,6 +101,7 @@ export default function SettingsScreen() {
           onChangeText={(val) => updateSetting('quietHoursStart', val)}
           placeholder="HH:mm"
           accessibilityLabel={`Quiet hours start: ${quietHoursStart}`}
+          accessibilityHint="Enter time in hours and minutes format, like 22:00"
         />
 
         <SettingRowInput
@@ -109,6 +110,7 @@ export default function SettingsScreen() {
           onChangeText={(val) => updateSetting('quietHoursEnd', val)}
           placeholder="HH:mm"
           accessibilityLabel={`Quiet hours end: ${quietHoursEnd}`}
+          accessibilityHint="Enter time in hours and minutes format, like 07:00"
         />
 
         {/* Carry Over */}
@@ -202,12 +204,14 @@ function SettingRowInput({
   onChangeText,
   placeholder,
   accessibilityLabel,
+  accessibilityHint,
 }: {
   label: string;
   value: string;
   onChangeText: (val: string) => void;
   placeholder: string;
   accessibilityLabel: string;
+  accessibilityHint?: string;
 }) {
   return (
     <View style={styles.settingRow}>
@@ -219,6 +223,7 @@ function SettingRowInput({
         placeholder={placeholder}
         placeholderTextColor={Colors.textTertiary}
         accessibilityLabel={accessibilityLabel}
+        accessibilityHint={accessibilityHint}
         keyboardType="numbers-and-punctuation"
       />
     </View>

@@ -69,6 +69,7 @@ export default function DaySwitcher() {
             style={styles.dateButton}
             accessibilityLabel={`Selected date: ${displayDate}. Tap to go to today.`}
             accessibilityRole="button"
+            accessibilityLiveRegion="polite"
           >
             <Text style={styles.dateText}>{displayDate}</Text>
             {isToday && <Text style={styles.todayBadge}>Today</Text>}

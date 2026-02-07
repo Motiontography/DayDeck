@@ -23,7 +23,11 @@ export default function TaskList({
 }: TaskListProps) {
   if (tasks.length === 0) {
     return (
-      <View style={styles.emptyState}>
+      <View
+        style={styles.emptyState}
+        accessible
+        accessibilityLabel="No tasks yet. Tap the plus button to add your first task."
+      >
         <Text style={styles.emptyTitle}>No tasks yet</Text>
         <Text style={styles.emptySubtitle}>Tap the + button to add your first task</Text>
       </View>

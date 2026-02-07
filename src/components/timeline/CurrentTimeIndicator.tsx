@@ -23,7 +23,8 @@ export default function CurrentTimeIndicator({ startHour }: CurrentTimeIndicator
     <View
       style={[styles.container, { top: topOffset }]}
       pointerEvents="none"
-      accessibilityLabel="Current time indicator"
+      accessible={false}
+      importantForAccessibility="no-hide-descendants"
     >
       <View style={styles.dot} />
       <View style={styles.line} />

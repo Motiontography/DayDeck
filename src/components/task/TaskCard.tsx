@@ -62,8 +62,9 @@ export default function TaskCard({
             if (hasSubtasks) setExpanded(!expanded);
           }}
           onLongPress={() => onEdit(task)}
-          accessibilityLabel={hasSubtasks ? `Tap to ${expanded ? 'collapse' : 'expand'} subtasks` : undefined}
-          accessibilityRole={hasSubtasks ? 'button' : 'none'}
+          accessibilityLabel={hasSubtasks ? `${task.title}. Tap to ${expanded ? 'collapse' : 'expand'} subtasks` : task.title}
+          accessibilityHint="Long press to edit this task"
+          accessibilityRole="button"
         >
           <View style={styles.titleRow}>
             <Text style={[styles.title, isDone && styles.titleDone]} numberOfLines={2}>

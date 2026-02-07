@@ -31,6 +31,6 @@ const styles = StyleSheet.create({
   label: {
     fontSize: Dimensions.fontXS,
     fontWeight: '600',
-    color: Colors.warning,
+    color: '#92400E', // amber-800 for WCAG AA contrast on light background
   },
 });

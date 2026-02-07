@@ -275,7 +275,11 @@ export default function TimelineView() {
 
         {/* Empty state */}
         {!hasBlocks && (
-          <View style={styles.emptyState}>
+          <View
+            style={styles.emptyState}
+            accessible
+            accessibilityLabel="No blocks yet. Tap the plus button to add your first time block."
+          >
             <Text style={styles.emptyTitle}>No blocks yet</Text>
             <Text style={styles.emptySubtitle}>
               Tap the + button to add your first time block
@@ -421,7 +425,8 @@ const styles = StyleSheet.create({
   },
   typeChip: {
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    minHeight: 44,
+    justifyContent: 'center',
     borderRadius: Dimensions.radiusLarge,
     backgroundColor: Colors.surfaceSecondary,
   },
