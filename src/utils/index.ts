@@ -9,3 +9,4 @@ export {
   areSameDay,
 } from './dateHelpers';
 export { generateId } from './idGenerator';
+export { generateNextOccurrence, generateOccurrences } from './recurrenceEngine';
