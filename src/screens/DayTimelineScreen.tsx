@@ -1,28 +1,19 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { parseISO, startOfDay, endOfDay, format } from 'date-fns';
 import { Colors, Dimensions } from '../constants';
-import { TimelineView } from '../components/timeline';
-import { DaySwitcher } from '../components/common';
+import { TimelineView, TemplateSheet } from '../components/timeline';
+import { WeeklyCalendar, DaySummaryStats } from '../components/common';
 import { useCalendar } from '../hooks/useCalendar';
-import { useCalendarStore, useTaskStore, useTimeBlockStore } from '../store';
-import { areSameDay } from '../utils';
+import { useCalendarStore, useTaskStore } from '../store';
 
 export default function DayTimelineScreen() {
   const selectedDate = useTaskStore((s) => s.selectedDate);
-  const timeBlocks = useTimeBlockStore((s) => s.timeBlocks);
   const setCalendarEvents = useCalendarStore((s) => s.setCalendarEvents);
   const calendarEnabled = useCalendarStore((s) => s.calendarEnabled);
   const { events, hasPermission, loading, requestPermission, fetchEvents } = useCalendar();
-
-  const todayBlocks = timeBlocks.filter((b) => areSameDay(b.startTime, selectedDate));
-  const totalMinutes = todayBlocks.reduce((sum, b) => {
-    const dur = (new Date(b.endTime).getTime() - new Date(b.startTime).getTime()) / 60000;
-    return sum + dur;
-  }, 0);
-  const hours = Math.floor(totalMinutes / 60);
-  const mins = Math.round(totalMinutes % 60);
+  const [templateSheetVisible, setTemplateSheetVisible] = useState(false);
 
   const dayName = format(parseISO(selectedDate), 'EEEE');
   const dateLabel = format(parseISO(selectedDate), 'MMMM d, yyyy');
@@ -49,25 +40,18 @@ export default function DayTimelineScreen() {
               {dateLabel}
             </Text>
           </View>
-          <View style={styles.statsContainer}>
-            {todayBlocks.length > 0 ? (
-              <View style={styles.statsBubble}>
-                <Text style={styles.statNumber}>{todayBlocks.length}</Text>
-                <Text style={styles.statUnit}>
-                  block{todayBlocks.length !== 1 ? 's' : ''}
-                </Text>
-                <View style={styles.statDivider} />
-                <Text style={styles.statDuration}>
-                  {hours > 0 ? `${hours}h ` : ''}{mins > 0 ? `${mins}m` : hours > 0 ? '' : '0m'}
-                </Text>
-              </View>
-            ) : (
-              <View style={styles.statsEmpty}>
-                <Text style={styles.statEmoji}>{'\u{1F331}'}</Text>
-                <Text style={styles.statEmptyLabel}>No plans</Text>
-              </View>
-            )}
-          </View>
+          <Pressable
+            onPress={() => setTemplateSheetVisible(true)}
+            style={({ pressed }) => [
+              styles.templateButton,
+              pressed && styles.templateButtonPressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Open templates"
+          >
+            <Text style={styles.templateButtonIcon}>{'\u{1F4CB}'}</Text>
+            <Text style={styles.templateButtonText}>Templates</Text>
+          </Pressable>
         </View>
         {!hasPermission && calendarEnabled && (
           <Pressable
@@ -82,8 +66,13 @@ export default function DayTimelineScreen() {
         )}
         {loading && <Text style={styles.loadingText}>Syncing...</Text>}
       </View>
-      <DaySwitcher />
+      <WeeklyCalendar />
+      <DaySummaryStats />
       <TimelineView />
+      <TemplateSheet
+        visible={templateSheetVisible}
+        onClose={() => setTemplateSheetVisible(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -122,53 +111,25 @@ const styles = StyleSheet.create({
     color: Colors.text,
     letterSpacing: -0.5,
   },
-  statsContainer: {
-    alignItems: 'flex-end',
-    paddingTop: 4,
-  },
-  statsBubble: {
+  templateButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 4,
     backgroundColor: Colors.primary + '12',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 14,
-    gap: 4,
   },
-  statNumber: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: Colors.primary,
+  templateButtonPressed: {
+    backgroundColor: Colors.primary + '25',
   },
-  statUnit: {
+  templateButtonIcon: {
+    fontSize: 14,
+  },
+  templateButtonText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: Colors.primary,
-    opacity: 0.8,
-  },
-  statDivider: {
-    width: 1,
-    height: 16,
-    backgroundColor: Colors.primary + '30',
-    marginHorizontal: 4,
-  },
-  statDuration: {
-    fontSize: 13,
     fontWeight: '700',
     color: Colors.primary,
-    opacity: 0.9,
-  },
-  statsEmpty: {
-    alignItems: 'center',
-    gap: 2,
-  },
-  statEmoji: {
-    fontSize: 22,
-  },
-  statEmptyLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: Colors.textSecondary,
   },
   calendarPrompt: {
     flexDirection: 'row',

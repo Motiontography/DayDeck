@@ -12,7 +12,10 @@ import SettingsScreen from './src/screens/SettingsScreen';
 import { Colors } from './src/constants/colors';
 import { Dimensions } from './src/constants/dimensions';
 import { useDatabase } from './src/hooks/useDatabase';
+import { useCarryOver } from './src/hooks/useCarryOver';
+import { useNotifications } from './src/hooks/useNotifications';
 import ErrorBoundary from './src/components/common/ErrorBoundary';
+import { ThemeProvider } from './src/theme/ThemeContext';
 
 const Tab = createBottomTabNavigator();
 
@@ -35,6 +38,8 @@ function TabIcon({ label, focused }: { label: string; focused: boolean }) {
 
 export default function App() {
   const { isReady, error } = useDatabase();
+  useCarryOver();
+  useNotifications();
 
   if (!isReady) {
     return (
@@ -51,6 +56,7 @@ export default function App() {
   return (
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
+        <ThemeProvider>
         <ErrorBoundary>
         <NavigationContainer>
           <Tab.Navigator
@@ -81,6 +87,7 @@ export default function App() {
           </Tab.Navigator>
         </NavigationContainer>
         </ErrorBoundary>
+        </ThemeProvider>
         <StatusBar style="dark" />
       </SafeAreaProvider>
     </GestureHandlerRootView>

@@ -5,3 +5,4 @@ export { default as DraggableTimeBlock } from './DraggableTimeBlock';
 export { default as CalendarEventCard } from './CalendarEventCard';
 export { default as CurrentTimeIndicator } from './CurrentTimeIndicator';
 export { default as QuickAddButton } from './QuickAddButton';
+export { default as TemplateSheet } from './TemplateSheet';

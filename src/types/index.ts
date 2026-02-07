@@ -10,4 +10,6 @@ export type {
   TimeBlock,
   CalendarEvent,
   DayPlan,
+  TemplateBlock,
+  Template,
 } from './models';

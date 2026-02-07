@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, Alert } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
@@ -12,42 +12,57 @@ import Animated, {
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { Colors, Dimensions } from '../../constants';
-import type { Task } from '../../types';
+import type { Task, Subtask } from '../../types';
+import { generateId } from '../../utils';
 import PriorityBadge from './PriorityBadge';
+import CarriedOverBadge from './CarriedOverBadge';
 import SubtaskRow from './SubtaskRow';
 
 const DELETE_THRESHOLD = -80;
 const SPRING_CONFIG = { damping: 20, stiffness: 200, mass: 0.5 };
 
+const PRIORITY_ACCENT: Record<string, string> = {
+  low: Colors.priorityLow,
+  medium: Colors.priorityMedium,
+  high: Colors.priorityHigh,
+  urgent: Colors.priorityUrgent,
+};
+
 interface TaskCardProps {
   task: Task;
+  selectedDate: string;
   onToggleStatus: (taskId: string) => void;
   onToggleSubtask: (taskId: string, subtaskId: string) => void;
   onRemoveSubtask: (taskId: string, subtaskId: string) => void;
+  onAddSubtask: (taskId: string, subtask: Subtask) => void;
   onDelete: (taskId: string) => void;
   onEdit: (task: Task) => void;
 }
 
 export default function TaskCard({
   task,
+  selectedDate,
   onToggleStatus,
   onToggleSubtask,
   onRemoveSubtask,
+  onAddSubtask,
   onDelete,
   onEdit,
 }: TaskCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const [newSubtaskText, setNewSubtaskText] = useState('');
   const isDone = task.status === 'done';
   const hasSubtasks = task.subtasks.length > 0;
   const completedSubtasks = task.subtasks.filter((s) => s.completed).length;
 
-  // Swipe-to-delete shared values
   const translateX = useSharedValue(0);
   const isDeleting = useSharedValue(false);
 
   const handleToggleStatus = useCallback(() => {
     Haptics.impactAsync(
-      isDone ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium,
+      isDone
+        ? Haptics.ImpactFeedbackStyle.Light
+        : Haptics.ImpactFeedbackStyle.Medium,
     );
     onToggleStatus(task.id);
   }, [isDone, onToggleStatus, task.id]);
@@ -75,17 +90,27 @@ export default function TaskCard({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   }, []);
 
-  // Swipe gesture for delete
+  const handleAddSubtask = useCallback(() => {
+    const trimmed = newSubtaskText.trim();
+    if (!trimmed) return;
+    const subtask: Subtask = {
+      id: generateId(),
+      title: trimmed,
+      completed: false,
+      parentTaskId: task.id,
+    };
+    onAddSubtask(task.id, subtask);
+    setNewSubtaskText('');
+  }, [newSubtaskText, onAddSubtask, task.id]);
+
   const swipeGesture = Gesture.Pan()
     .activeOffsetX([-15, 15])
     .failOffsetY([-10, 10])
     .onUpdate((e) => {
       'worklet';
-      // Only allow swiping left (negative)
       if (e.translationX < 0) {
         translateX.value = e.translationX;
       }
-      // Trigger haptic feedback when crossing threshold
       if (e.translationX < DELETE_THRESHOLD && !isDeleting.value) {
         isDeleting.value = true;
         runOnJS(triggerHaptic)();
@@ -96,11 +121,9 @@ export default function TaskCard({
     .onEnd(() => {
       'worklet';
       if (translateX.value < DELETE_THRESHOLD) {
-        // Keep it revealed and trigger delete
         translateX.value = withSpring(DELETE_THRESHOLD, SPRING_CONFIG);
         runOnJS(triggerDelete)();
       } else {
-        // Snap back
         translateX.value = withSpring(0, SPRING_CONFIG);
       }
       isDeleting.value = false;
@@ -122,7 +145,6 @@ export default function TaskCard({
 
   return (
     <View style={styles.swipeContainer}>
-      {/* Delete background revealed by swipe */}
       <Animated.View style={[styles.deleteBackground, deleteBackgroundStyle]}>
         <View style={styles.deleteBackgroundContent}>
           <Text style={styles.deleteBackgroundIcon}>{'\u{1F5D1}'}</Text>
@@ -132,11 +154,20 @@ export default function TaskCard({
 
       <GestureDetector gesture={swipeGesture}>
         <Animated.View style={[styles.card, cardAnimatedStyle]}>
+          {/* Priority accent bar */}
           <View
+            style={[
+              styles.accentBar,
+              { backgroundColor: PRIORITY_ACCENT[task.priority] },
+            ]}
+          />
+
+          <View
+            style={styles.cardInner}
             accessibilityLabel={`Task: ${task.title}, ${task.priority} priority, ${isDone ? 'completed' : 'not completed'}`}
           >
             <View style={styles.topRow}>
-              {/* Completion checkbox */}
+              {/* Checkbox */}
               <Pressable
                 onPress={handleToggleStatus}
                 style={styles.checkboxHitArea}
@@ -144,31 +175,49 @@ export default function TaskCard({
                 accessibilityState={{ checked: isDone }}
                 accessibilityLabel={`Mark ${task.title} as ${isDone ? 'not done' : 'done'}`}
               >
-                <View style={[styles.checkbox, isDone && styles.checkboxChecked]}>
-                  {isDone && <Text style={styles.checkmark}>{'\u2713'}</Text>}
+                <View
+                  style={[
+                    styles.checkbox,
+                    isDone && styles.checkboxChecked,
+                  ]}
+                >
+                  {isDone && (
+                    <Text style={styles.checkmark}>{'\u2713'}</Text>
+                  )}
                 </View>
               </Pressable>
 
               {/* Task content */}
               <Pressable
                 style={styles.content}
-                onPress={() => {
-                  if (hasSubtasks) setExpanded(!expanded);
-                }}
+                onPress={() => setExpanded(!expanded)}
                 onLongPress={() => onEdit(task)}
-                accessibilityLabel={hasSubtasks ? `${task.title}. Tap to ${expanded ? 'collapse' : 'expand'} subtasks` : `${task.title}`}
+                accessibilityLabel={
+                  hasSubtasks
+                    ? `${task.title}. Tap to ${expanded ? 'collapse' : 'expand'} subtasks`
+                    : `${task.title}. Tap to expand, long press to edit.`
+                }
                 accessibilityHint="Long press to edit. Swipe left to delete."
                 accessibilityRole="button"
               >
                 <View style={styles.titleRow}>
-                  <Text style={[styles.title, isDone && styles.titleDone]} numberOfLines={2}>
+                  <Text
+                    style={[styles.title, isDone && styles.titleDone]}
+                    numberOfLines={2}
+                  >
                     {task.title}
                   </Text>
                   <PriorityBadge priority={task.priority} />
                 </View>
 
                 {task.description ? (
-                  <Text style={styles.description} numberOfLines={expanded ? undefined : 1}>
+                  <Text
+                    style={[
+                      styles.description,
+                      isDone && styles.descriptionDone,
+                    ]}
+                    numberOfLines={expanded ? undefined : 1}
+                  >
                     {task.description}
                   </Text>
                 ) : null}
@@ -176,12 +225,28 @@ export default function TaskCard({
                 <View style={styles.metaRow}>
                   {task.estimatedMinutes != null && (
                     <View style={styles.metaPill}>
-                      <Text style={styles.metaPillText}>{task.estimatedMinutes} min</Text>
+                      <Text style={styles.metaPillText}>
+                        {task.estimatedMinutes >= 60
+                          ? `${Math.floor(task.estimatedMinutes / 60)}h${task.estimatedMinutes % 60 > 0 ? ` ${task.estimatedMinutes % 60}m` : ''}`
+                          : `${task.estimatedMinutes}m`}
+                      </Text>
                     </View>
                   )}
                   {hasSubtasks && (
-                    <View style={styles.metaPill}>
-                      <Text style={styles.metaPillText}>
+                    <View
+                      style={[
+                        styles.metaPill,
+                        completedSubtasks === task.subtasks.length &&
+                          styles.metaPillSuccess,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.metaPillText,
+                          completedSubtasks === task.subtasks.length &&
+                            styles.metaPillTextSuccess,
+                        ]}
+                      >
                         {completedSubtasks}/{task.subtasks.length} subtasks
                       </Text>
                     </View>
@@ -189,25 +254,77 @@ export default function TaskCard({
                   {task.recurrence && (
                     <View style={styles.metaPill}>
                       <Text style={styles.metaPillText}>
-                        {formatRecurrenceLabel(task.recurrence.frequency, task.recurrence.interval)}
+                        {formatRecurrenceLabel(
+                          task.recurrence.frequency,
+                          task.recurrence.interval,
+                        )}
                       </Text>
                     </View>
                   )}
+                  {task.carriedOverFrom != null && (
+                    <CarriedOverBadge fromDate={task.carriedOverFrom} />
+                  )}
                 </View>
+
+                {/* Expand indicator */}
+                <Text style={styles.expandHint}>
+                  {expanded ? '\u25B2' : '\u25BC'}
+                </Text>
               </Pressable>
             </View>
 
-            {/* Expanded subtasks */}
-            {expanded && hasSubtasks && (
+            {/* Expanded subtask section */}
+            {expanded && (
               <View style={styles.subtaskSection}>
                 {task.subtasks.map((subtask) => (
                   <SubtaskRow
                     key={subtask.id}
                     subtask={subtask}
-                    onToggle={(subtaskId) => onToggleSubtask(task.id, subtaskId)}
-                    onRemove={(subtaskId) => onRemoveSubtask(task.id, subtaskId)}
+                    onToggle={(subtaskId) =>
+                      onToggleSubtask(task.id, subtaskId)
+                    }
+                    onRemove={(subtaskId) =>
+                      onRemoveSubtask(task.id, subtaskId)
+                    }
                   />
                 ))}
+
+                {/* Inline quick-add subtask */}
+                {!isDone && (
+                  <View style={styles.inlineAddRow}>
+                    <TextInput
+                      style={styles.inlineAddInput}
+                      value={newSubtaskText}
+                      onChangeText={setNewSubtaskText}
+                      placeholder="Add subtask..."
+                      placeholderTextColor={Colors.textTertiary}
+                      onSubmitEditing={handleAddSubtask}
+                      returnKeyType="done"
+                      accessibilityLabel="Add a new subtask"
+                    />
+                    <Pressable
+                      onPress={handleAddSubtask}
+                      style={({ pressed }) => [
+                        styles.inlineAddButton,
+                        pressed && styles.inlineAddButtonPressed,
+                        !newSubtaskText.trim() &&
+                          styles.inlineAddButtonDisabled,
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel="Add subtask"
+                    >
+                      <Text
+                        style={[
+                          styles.inlineAddButtonText,
+                          !newSubtaskText.trim() &&
+                            styles.inlineAddButtonTextDisabled,
+                        ]}
+                      >
+                        +
+                      </Text>
+                    </Pressable>
+                  </View>
+                )}
               </View>
             )}
           </View>
@@ -239,13 +356,13 @@ function formatRecurrenceLabel(frequency: string, interval: number): string {
 const styles = StyleSheet.create({
   swipeContainer: {
     marginBottom: Dimensions.itemSpacing,
-    borderRadius: Dimensions.radiusMedium,
+    borderRadius: 14,
     overflow: 'hidden',
   },
   deleteBackground: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: Colors.error,
-    borderRadius: Dimensions.radiusMedium,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'flex-end',
     paddingRight: 20,
@@ -265,13 +382,20 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: Colors.surface,
-    borderRadius: Dimensions.radiusMedium,
+    borderRadius: 14,
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+    flexDirection: 'row',
+  },
+  accentBar: {
+    width: 4,
+  },
+  cardInner: {
+    flex: 1,
   },
   topRow: {
     flexDirection: 'row',
@@ -285,10 +409,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   checkbox: {
-    width: 24,
-    height: 24,
+    width: 26,
+    height: 26,
     borderRadius: 8,
-    borderWidth: 2,
+    borderWidth: 2.5,
     borderColor: Colors.border,
     justifyContent: 'center',
     alignItems: 'center',
@@ -299,13 +423,13 @@ const styles = StyleSheet.create({
   },
   checkmark: {
     color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
-    lineHeight: 16,
+    fontSize: 15,
+    fontWeight: '800',
+    lineHeight: 17,
   },
   content: {
     flex: 1,
-    marginLeft: 4,
+    marginLeft: 6,
   },
   titleRow: {
     flexDirection: 'row',
@@ -327,6 +451,10 @@ const styles = StyleSheet.create({
     fontSize: Dimensions.fontSM,
     color: Colors.textSecondary,
     marginTop: 4,
+    lineHeight: 17,
+  },
+  descriptionDone: {
+    color: Colors.textTertiary,
   },
   metaRow: {
     flexDirection: 'row',
@@ -338,18 +466,68 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surfaceTertiary,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 6,
+    borderRadius: 8,
   },
   metaPillText: {
     fontSize: Dimensions.fontXS,
-    fontWeight: '500',
+    fontWeight: '600',
     color: Colors.textTertiary,
+  },
+  metaPillSuccess: {
+    backgroundColor: Colors.successLight,
+  },
+  metaPillTextSuccess: {
+    color: Colors.success,
+  },
+  expandHint: {
+    fontSize: 8,
+    color: Colors.textTertiary,
+    textAlign: 'right',
+    marginTop: 4,
   },
   subtaskSection: {
     paddingHorizontal: Dimensions.cardPadding,
     paddingBottom: Dimensions.cardPadding,
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    marginTop: 4,
+    borderTopColor: Colors.borderLight,
+    marginTop: 2,
+  },
+  inlineAddRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    gap: 6,
+  },
+  inlineAddInput: {
+    flex: 1,
+    backgroundColor: Colors.surfaceTertiary,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: Dimensions.fontSM,
+    color: Colors.text,
+  },
+  inlineAddButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: Colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  inlineAddButtonPressed: {
+    backgroundColor: Colors.primaryDark,
+  },
+  inlineAddButtonDisabled: {
+    backgroundColor: Colors.surfaceTertiary,
+  },
+  inlineAddButtonText: {
+    fontSize: 20,
+    fontWeight: '500',
+    color: '#FFFFFF',
+    lineHeight: 22,
+  },
+  inlineAddButtonTextDisabled: {
+    color: Colors.textTertiary,
   },
 });

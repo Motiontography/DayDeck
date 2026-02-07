@@ -4,6 +4,7 @@ import { Defaults } from '../constants';
 import { loadSettings, saveSetting } from '../db';
 
 export type CarryOverBehavior = 'auto' | 'ask' | 'never';
+export type ThemeSetting = 'light' | 'dark' | 'system';
 
 export interface SettingsState {
   dayStartHour: number;
@@ -13,6 +14,7 @@ export interface SettingsState {
   quietHoursEnd: string; // "HH:mm"
   carryOverBehavior: CarryOverBehavior;
   reminderOffsetMinutes: number;
+  theme: ThemeSetting;
 
   isHydrated: boolean;
   hydrateFromDb: (db: SQLiteDatabase) => Promise<void>;
@@ -28,6 +30,7 @@ export interface EditableSettings {
   quietHoursEnd: string;
   carryOverBehavior: CarryOverBehavior;
   reminderOffsetMinutes: number;
+  theme: ThemeSetting;
 }
 
 let _db: SQLiteDatabase | null = null;
@@ -40,6 +43,7 @@ const SETTING_KEYS: (keyof EditableSettings)[] = [
   'quietHoursEnd',
   'carryOverBehavior',
   'reminderOffsetMinutes',
+  'theme',
 ];
 
 function parseSettingValue(key: keyof EditableSettings, raw: string): EditableSettings[keyof EditableSettings] {
@@ -52,6 +56,7 @@ function parseSettingValue(key: keyof EditableSettings, raw: string): EditableSe
     case 'quietHoursStart':
     case 'quietHoursEnd':
     case 'carryOverBehavior':
+    case 'theme':
       return raw;
     default:
       return raw;
@@ -66,6 +71,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   quietHoursEnd: Defaults.quietHoursEnd,
   carryOverBehavior: Defaults.carryOverBehavior,
   reminderOffsetMinutes: Defaults.reminderOffsetMinutes,
+  theme: 'system',
 
   isHydrated: false,
 

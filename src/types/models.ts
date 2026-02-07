@@ -70,3 +70,21 @@ export interface DayPlan {
   taskIds: string[]; // ordered references, not embedded objects
   timeBlockIds: string[]; // ordered references
 }
+
+export interface TemplateBlock {
+  title: string;
+  type: TimeBlockType;
+  startHour: number; // 0-23
+  startMinute: number; // 0-59
+  durationMinutes: number;
+  color: string;
+}
+
+export interface Template {
+  id: string;
+  name: string;
+  icon: string; // unicode emoji
+  blocks: TemplateBlock[];
+  createdAt: string;
+  updatedAt: string;
+}

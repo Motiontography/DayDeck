@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-const CURRENT_VERSION = 3;
+const CURRENT_VERSION = 4;
 
 const migrations: Record<number, string[]> = {
   1: [
@@ -46,7 +46,7 @@ const migrations: Record<number, string[]> = {
     `CREATE TABLE IF NOT EXISTS schema_version (
       version INTEGER NOT NULL
     )`,
-    `INSERT INTO schema_version (version) VALUES (1)`,
+    `INSERT OR REPLACE INTO schema_version (version) VALUES (1)`,
   ],
   2: [
     `CREATE TABLE IF NOT EXISTS settings (
@@ -56,6 +56,16 @@ const migrations: Record<number, string[]> = {
   ],
   3: [
     `ALTER TABLE tasks ADD COLUMN carried_over_from TEXT`,
+  ],
+  4: [
+    `CREATE TABLE IF NOT EXISTS templates (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      icon TEXT NOT NULL DEFAULT '📋',
+      blocks_json TEXT NOT NULL DEFAULT '[]',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )`,
   ],
 };
 
