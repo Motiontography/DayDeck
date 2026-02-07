@@ -15,6 +15,7 @@ interface TaskRow {
   created_at: string;
   updated_at: string;
   completed_at: string | null;
+  carried_over_from: string | null;
 }
 
 interface SubtaskRow {
@@ -42,6 +43,7 @@ function rowToTask(row: TaskRow, subtasks: Subtask[]): Task {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     completedAt: row.completed_at,
+    carriedOverFrom: row.carried_over_from,
   };
 }
 
@@ -93,8 +95,8 @@ export async function saveTask(db: SQLiteDatabase, task: Task): Promise<void> {
       `INSERT INTO tasks (
         id, title, description, status, priority, scheduled_date,
         estimated_minutes, sort_order, recurrence_json, notifications_json,
-        created_at, updated_at, completed_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        created_at, updated_at, completed_at, carried_over_from
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         title = excluded.title,
         description = excluded.description,
@@ -106,7 +108,8 @@ export async function saveTask(db: SQLiteDatabase, task: Task): Promise<void> {
         recurrence_json = excluded.recurrence_json,
         notifications_json = excluded.notifications_json,
         updated_at = excluded.updated_at,
-        completed_at = excluded.completed_at`,
+        completed_at = excluded.completed_at,
+        carried_over_from = excluded.carried_over_from`,
       [
         task.id,
         task.title,
@@ -121,6 +124,7 @@ export async function saveTask(db: SQLiteDatabase, task: Task): Promise<void> {
         task.createdAt,
         task.updatedAt,
         task.completedAt,
+        task.carriedOverFrom,
       ],
     );
 

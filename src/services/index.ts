@@ -9,3 +9,10 @@ export {
   cancelAllNotifications,
   rescheduleAllTaskNotifications,
 } from './notificationService';
+export {
+  getCarryOverCandidates,
+  carryOverTasks,
+  undoCarryOver,
+  clearCarryOverBadge,
+} from './carryOverService';
+export type { CarryOverResult } from './carryOverService';

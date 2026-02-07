@@ -5,6 +5,7 @@ import { Colors, Dimensions } from '../constants';
 import { useTaskStore } from '../store';
 import type { Task } from '../types';
 import { TaskList, TaskForm } from '../components/task';
+import { DaySwitcher } from '../components/common';
 
 export default function TasksScreen() {
   const tasks = useTaskStore((s) => s.tasks);
@@ -66,8 +67,8 @@ export default function TasksScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Tasks</Text>
-        <Text style={styles.dateLabel}>{selectedDate}</Text>
       </View>
+      <DaySwitcher />
 
       {/* Task list */}
       <TaskList
@@ -117,11 +118,6 @@ const styles = StyleSheet.create({
     fontSize: Dimensions.fontTitle,
     fontWeight: '700',
     color: Colors.text,
-  },
-  dateLabel: {
-    fontSize: Dimensions.fontSM,
-    color: Colors.textSecondary,
-    marginTop: 2,
   },
   fab: {
     position: 'absolute',

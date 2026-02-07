@@ -115,6 +115,7 @@ export default function TaskForm({
         createdAt: now,
         updatedAt: now,
         completedAt: null,
+        carriedOverFrom: null,
       };
       onSubmit(task);
     }

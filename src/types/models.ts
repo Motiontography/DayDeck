@@ -39,6 +39,7 @@ export interface Task {
   createdAt: string; // ISO 8601 with timezone offset
   updatedAt: string; // ISO 8601 with timezone offset
   completedAt: string | null; // ISO 8601 with timezone offset
+  carriedOverFrom: string | null; // original scheduledDate before carry-over
 }
 
 export type TimeBlockType = 'task' | 'event' | 'break' | 'focus';

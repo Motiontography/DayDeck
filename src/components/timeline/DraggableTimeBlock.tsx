@@ -211,8 +211,16 @@ function DraggableTimeBlock({
           blockHasConflict && styles.conflictBorder,
           animatedBlockStyle,
         ]}
+        accessible
         accessibilityRole="button"
         accessibilityLabel={`${block.title}, ${formatTimeRange(block.startTime, block.endTime)}${blockHasConflict ? ', conflicts with a calendar event' : ''}. Long press to drag, drag bottom edge to resize.`}
+        onAccessibilityEscape={() => setIsFocused(false)}
+        onAccessibilityAction={(event) => {
+          if (event.nativeEvent.actionName === 'activate') {
+            setIsFocused((prev) => !prev);
+          }
+        }}
+        accessibilityActions={[{ name: 'activate', label: 'Toggle move controls' }]}
       >
         <Text style={[styles.title, isCompact && styles.titleCompact]} numberOfLines={1}>
           {block.title}
@@ -221,6 +229,38 @@ function DraggableTimeBlock({
           <Text style={styles.time} numberOfLines={1}>
             {formatTimeRange(block.startTime, block.endTime)}
           </Text>
+        )}
+
+        {/* Accessibility: Move up / Move down buttons (non-gesture alternative) */}
+        {isFocused && (onMoveUp || onMoveDown) && (
+          <View style={styles.moveButtonRow}>
+            {onMoveUp && (
+              <Pressable
+                style={styles.moveButton}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  onMoveUp(block.id);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={`Move ${block.title} up 15 minutes`}
+              >
+                <Text style={styles.moveButtonText}>Up</Text>
+              </Pressable>
+            )}
+            {onMoveDown && (
+              <Pressable
+                style={styles.moveButton}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  onMoveDown(block.id);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={`Move ${block.title} down 15 minutes`}
+              >
+                <Text style={styles.moveButtonText}>Down</Text>
+              </Pressable>
+            )}
+          </View>
         )}
 
         {/* Resize handle at the bottom */}
@@ -285,5 +325,25 @@ const styles = StyleSheet.create({
     height: 3,
     borderRadius: 1.5,
     opacity: 0.5,
+  },
+  moveButtonRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 4,
+  },
+  moveButton: {
+    backgroundColor: Colors.surfaceSecondary,
+    borderRadius: Dimensions.radiusSmall,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    minWidth: Dimensions.minTouchTarget,
+    minHeight: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  moveButtonText: {
+    fontSize: Dimensions.fontXS,
+    fontWeight: '600',
+    color: Colors.primary,
   },
 });
