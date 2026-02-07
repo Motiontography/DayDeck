@@ -1,5 +1,6 @@
 export type {
   Priority,
+  TaskStatus,
   RecurrenceFrequency,
   Recurrence,
   TaskNotification,

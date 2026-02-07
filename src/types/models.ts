@@ -1,5 +1,7 @@
 export type Priority = 'low' | 'medium' | 'high' | 'urgent';
 
+export type TaskStatus = 'todo' | 'in_progress' | 'done' | 'cancelled';
+
 export type RecurrenceFrequency = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
 export interface Recurrence {
@@ -19,21 +21,24 @@ export interface Subtask {
   id: string;
   title: string;
   completed: boolean;
+  parentTaskId: string;
 }
 
 export interface Task {
   id: string;
   title: string;
   description: string;
+  status: TaskStatus;
   priority: Priority;
-  dueDate: string; // ISO date string
-  estimatedDuration: number; // minutes
-  completed: boolean;
+  scheduledDate: string; // ISO date "YYYY-MM-DD" (user's local day)
+  estimatedMinutes: number | null;
   subtasks: Subtask[];
   recurrence: Recurrence | null;
   notifications: TaskNotification[];
-  createdAt: string;
-  updatedAt: string;
+  sortOrder: number;
+  createdAt: string; // ISO 8601 with timezone offset
+  updatedAt: string; // ISO 8601 with timezone offset
+  completedAt: string | null; // ISO 8601 with timezone offset
 }
 
 export type TimeBlockType = 'task' | 'event' | 'break' | 'focus';
@@ -59,6 +64,8 @@ export interface CalendarEvent {
 
 export interface DayPlan {
   date: string; // ISO date string (YYYY-MM-DD)
-  timeBlocks: TimeBlock[];
-  tasks: Task[];
+  wakeTime: string; // "07:00"
+  sleepTime: string; // "23:00"
+  taskIds: string[]; // ordered references, not embedded objects
+  timeBlockIds: string[]; // ordered references
 }

@@ -24,6 +24,9 @@ export const Dimensions = {
   fontXXL: 24,
   fontTitle: 28,
 
+  // Touch targets (Apple HIG: 44pt, Material: 48dp)
+  minTouchTarget: 44,
+
   // Tab bar
   tabBarHeight: 60,
 } as const;

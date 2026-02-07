@@ -1,59 +1,105 @@
-import React from 'react';
-import { View, Text, StyleSheet, FlatList } from 'react-native';
+import React, { useState, useMemo, useCallback } from 'react';
+import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Dimensions } from '../constants';
 import { useTaskStore } from '../store';
 import type { Task } from '../types';
-
-function TaskItem({ task }: { task: Task }) {
-  return (
-    <View style={styles.taskItem}>
-      <View style={[styles.priorityDot, { backgroundColor: getPriorityColor(task.priority) }]} />
-      <View style={styles.taskContent}>
-        <Text style={[styles.taskTitle, task.completed && styles.taskCompleted]}>
-          {task.title}
-        </Text>
-        {task.description ? (
-          <Text style={styles.taskDescription} numberOfLines={1}>
-            {task.description}
-          </Text>
-        ) : null}
-      </View>
-    </View>
-  );
-}
-
-function getPriorityColor(priority: Task['priority']): string {
-  const map = {
-    low: Colors.priorityLow,
-    medium: Colors.priorityMedium,
-    high: Colors.priorityHigh,
-    urgent: Colors.priorityUrgent,
-  };
-  return map[priority];
-}
+import { TaskList, TaskForm } from '../components/task';
 
 export default function TasksScreen() {
   const tasks = useTaskStore((s) => s.tasks);
+  const selectedDate = useTaskStore((s) => s.selectedDate);
+  const addTask = useTaskStore((s) => s.addTask);
+  const updateTask = useTaskStore((s) => s.updateTask);
+  const deleteTask = useTaskStore((s) => s.deleteTask);
+  const setTaskStatus = useTaskStore((s) => s.setTaskStatus);
+  const toggleSubtask = useTaskStore((s) => s.toggleSubtask);
+  const removeSubtask = useTaskStore((s) => s.removeSubtask);
+
+  const [formVisible, setFormVisible] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+
+  // Filter tasks for the selected date
+  const dateTasks = useMemo(
+    () => tasks.filter((t) => t.scheduledDate === selectedDate),
+    [tasks, selectedDate]
+  );
+
+  const handleToggleStatus = useCallback(
+    (taskId: string) => {
+      const task = tasks.find((t) => t.id === taskId);
+      if (!task) return;
+      setTaskStatus(taskId, task.status === 'done' ? 'todo' : 'done');
+    },
+    [tasks, setTaskStatus]
+  );
+
+  const handleDelete = useCallback(
+    (taskId: string) => {
+      Alert.alert('Delete Task', 'Are you sure you want to delete this task?', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => deleteTask(taskId) },
+      ]);
+    },
+    [deleteTask]
+  );
+
+  const handleEdit = useCallback((task: Task) => {
+    setEditingTask(task);
+    setFormVisible(true);
+  }, []);
+
+  const handleCloseForm = useCallback(() => {
+    setFormVisible(false);
+    setEditingTask(null);
+  }, []);
+
+  const handleAddTask = useCallback(
+    (task: Task) => {
+      addTask(task);
+    },
+    [addTask]
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Tasks</Text>
+        <Text style={styles.dateLabel}>{selectedDate}</Text>
       </View>
-      {tasks.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyTitle}>No tasks yet</Text>
-          <Text style={styles.emptySubtitle}>Add your first task to get started</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={tasks}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <TaskItem task={item} />}
-          contentContainerStyle={styles.list}
-        />
-      )}
+
+      {/* Task list */}
+      <TaskList
+        tasks={dateTasks}
+        onToggleStatus={handleToggleStatus}
+        onToggleSubtask={toggleSubtask}
+        onRemoveSubtask={removeSubtask}
+        onDelete={handleDelete}
+        onEdit={handleEdit}
+      />
+
+      {/* FAB - Floating Action Button */}
+      <Pressable
+        style={styles.fab}
+        onPress={() => {
+          setEditingTask(null);
+          setFormVisible(true);
+        }}
+        accessibilityRole="button"
+        accessibilityLabel="Add new task"
+      >
+        <Text style={styles.fabIcon}>+</Text>
+      </Pressable>
+
+      {/* Task form modal */}
+      <TaskForm
+        visible={formVisible}
+        onClose={handleCloseForm}
+        onSubmit={handleAddTask}
+        onUpdate={updateTask}
+        editingTask={editingTask}
+      />
     </SafeAreaView>
   );
 }
@@ -72,53 +118,31 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.text,
   },
-  list: {
-    paddingHorizontal: Dimensions.screenPadding,
-  },
-  taskItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.surface,
-    borderRadius: Dimensions.radiusMedium,
-    padding: Dimensions.cardPadding,
-    marginBottom: Dimensions.itemSpacing,
-  },
-  priorityDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 12,
-  },
-  taskContent: {
-    flex: 1,
-  },
-  taskTitle: {
-    fontSize: Dimensions.fontLG,
-    fontWeight: '500',
-    color: Colors.text,
-  },
-  taskCompleted: {
-    textDecorationLine: 'line-through',
-    color: Colors.textTertiary,
-  },
-  taskDescription: {
+  dateLabel: {
     fontSize: Dimensions.fontSM,
     color: Colors.textSecondary,
     marginTop: 2,
   },
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
   },
-  emptyTitle: {
-    fontSize: Dimensions.fontXL,
-    fontWeight: '600',
-    color: Colors.text,
-  },
-  emptySubtitle: {
-    fontSize: Dimensions.fontMD,
-    color: Colors.textSecondary,
-    marginTop: 4,
+  fabIcon: {
+    fontSize: 28,
+    color: '#FFFFFF',
+    fontWeight: '300',
+    lineHeight: 30,
   },
 });

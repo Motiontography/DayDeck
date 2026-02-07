@@ -9,7 +9,7 @@ export const Colors = {
 
   text: '#111827', // gray-900
   textSecondary: '#6B7280', // gray-500
-  textTertiary: '#9CA3AF', // gray-400
+  textTertiary: '#6B7280', // gray-500 (meets WCAG AA 4.5:1 on gray-50)
 
   border: '#E5E7EB', // gray-200
   borderFocus: '#4F46E5',
