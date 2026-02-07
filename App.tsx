@@ -12,6 +12,7 @@ import SettingsScreen from './src/screens/SettingsScreen';
 import { Colors } from './src/constants/colors';
 import { Dimensions } from './src/constants/dimensions';
 import { useDatabase } from './src/hooks/useDatabase';
+import ErrorBoundary from './src/components/common/ErrorBoundary';
 
 const Tab = createBottomTabNavigator();
 
@@ -33,11 +34,11 @@ export default function App() {
 
   if (!isReady) {
     return (
-      <View style={styles.loading}>
+      <View style={styles.loading} accessibilityRole="alert">
         {error ? (
           <Text style={styles.errorText}>Failed to load database: {error.message}</Text>
         ) : (
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <ActivityIndicator size="large" color={Colors.primary} accessibilityLabel="Loading application" />
         )}
       </View>
     );
@@ -46,6 +47,7 @@ export default function App() {
   return (
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
+        <ErrorBoundary>
         <NavigationContainer>
           <Tab.Navigator
             screenOptions={({ route }) => ({
@@ -56,11 +58,24 @@ export default function App() {
               headerShown: false,
             })}
           >
-            <Tab.Screen name="Today" component={DayTimelineScreen} />
-            <Tab.Screen name="Tasks" component={TasksScreen} />
-            <Tab.Screen name="Settings" component={SettingsScreen} />
+            <Tab.Screen
+              name="Today"
+              component={DayTimelineScreen}
+              options={{ tabBarAccessibilityLabel: 'Today timeline tab' }}
+            />
+            <Tab.Screen
+              name="Tasks"
+              component={TasksScreen}
+              options={{ tabBarAccessibilityLabel: 'Tasks list tab' }}
+            />
+            <Tab.Screen
+              name="Settings"
+              component={SettingsScreen}
+              options={{ tabBarAccessibilityLabel: 'Settings tab' }}
+            />
           </Tab.Navigator>
         </NavigationContainer>
+        </ErrorBoundary>
         <StatusBar style="auto" />
       </SafeAreaProvider>
     </GestureHandlerRootView>
