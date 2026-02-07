@@ -6,8 +6,8 @@ import Animated, {
   useAnimatedRef,
   scrollTo,
 } from 'react-native-reanimated';
-import { Colors, Dimensions, Defaults, Config } from '../../constants';
-import { useTimeBlockStore, useTaskStore, useCalendarStore } from '../../store';
+import { Colors, Dimensions, Config } from '../../constants';
+import { useTimeBlockStore, useTaskStore, useCalendarStore, useSettingsStore } from '../../store';
 import { generateId, areSameDay, detectConflicts, hasConflict } from '../../utils';
 import type { TimeBlock, TimeBlockType, CalendarEvent } from '../../types';
 import HourMarker from './HourMarker';
@@ -16,39 +16,32 @@ import CalendarEventCard from './CalendarEventCard';
 import CurrentTimeIndicator from './CurrentTimeIndicator';
 import QuickAddButton from './QuickAddButton';
 
-const START_HOUR = Defaults.dayStartHour;
-const END_HOUR = Defaults.dayEndHour;
 const HOUR_HEIGHT = Dimensions.timelineHourHeight;
-const TOTAL_HOURS = END_HOUR - START_HOUR;
 
-function getBlockPosition(block: TimeBlock) {
+function getBlockPosition(block: TimeBlock, startHour: number) {
   const start = new Date(block.startTime);
   const end = new Date(block.endTime);
-  const startMinutes = (start.getHours() - START_HOUR) * 60 + start.getMinutes();
-  const endMinutes = (end.getHours() - START_HOUR) * 60 + end.getMinutes();
+  const startMinutes = (start.getHours() - startHour) * 60 + start.getMinutes();
+  const endMinutes = (end.getHours() - startHour) * 60 + end.getMinutes();
   const topOffset = (startMinutes / 60) * HOUR_HEIGHT;
   const height = ((endMinutes - startMinutes) / 60) * HOUR_HEIGHT;
   return { topOffset, height };
 }
 
-function topOffsetToDate(topOffset: number, baseDate: string): Date {
+function topOffsetToDate(topOffset: number, baseDate: string, startHour: number): Date {
   const totalMinutes = (topOffset / HOUR_HEIGHT) * 60;
-  const hours = Math.floor(totalMinutes / 60) + START_HOUR;
+  const hours = Math.floor(totalMinutes / 60) + startHour;
   const minutes = Math.round(totalMinutes % 60);
   const d = new Date(baseDate + 'T00:00:00');
   d.setHours(hours, minutes, 0, 0);
   return d;
 }
 
-function heightToMinutes(height: number): number {
-  return (height / HOUR_HEIGHT) * 60;
-}
-
-function getEventPosition(event: CalendarEvent) {
+function getEventPosition(event: CalendarEvent, startHour: number) {
   const start = new Date(event.startTime);
   const end = new Date(event.endTime);
-  const startMinutes = (start.getHours() - START_HOUR) * 60 + start.getMinutes();
-  const endMinutes = (end.getHours() - START_HOUR) * 60 + end.getMinutes();
+  const startMinutes = (start.getHours() - startHour) * 60 + start.getMinutes();
+  const endMinutes = (end.getHours() - startHour) * 60 + end.getMinutes();
   const topOffset = (startMinutes / 60) * HOUR_HEIGHT;
   const height = ((endMinutes - startMinutes) / 60) * HOUR_HEIGHT;
   return { topOffset, height };
@@ -61,8 +54,13 @@ export default function TimelineView() {
   const timeBlocks = useTimeBlockStore((s) => s.timeBlocks);
   const addTimeBlock = useTimeBlockStore((s) => s.addTimeBlock);
   const updateTimeBlock = useTimeBlockStore((s) => s.updateTimeBlock);
+  const moveTimeBlock = useTimeBlockStore((s) => s.moveTimeBlock);
   const calendarEvents = useCalendarStore((s) => s.calendarEvents);
   const calendarEnabled = useCalendarStore((s) => s.calendarEnabled);
+  const dayStartHour = useSettingsStore((s) => s.dayStartHour);
+  const dayEndHour = useSettingsStore((s) => s.dayEndHour);
+  const defaultTaskDuration = useSettingsStore((s) => s.defaultTaskDurationMinutes);
+  const totalHours = dayEndHour - dayStartHour;
 
   const [modalVisible, setModalVisible] = useState(false);
   const [newTitle, setNewTitle] = useState('');
@@ -86,13 +84,13 @@ export default function TimelineView() {
   // Auto-scroll to current time on mount
   useEffect(() => {
     const now = new Date();
-    const minutesFromStart = (now.getHours() - START_HOUR) * 60 + now.getMinutes();
+    const minutesFromStart = (now.getHours() - dayStartHour) * 60 + now.getMinutes();
     const targetY = Math.max(0, (minutesFromStart / 60) * HOUR_HEIGHT - 120);
     const timer = setTimeout(() => {
       scrollTo(scrollRef, 0, targetY, false);
     }, 100);
     return () => clearTimeout(timer);
-  }, [scrollRef]);
+  }, [scrollRef, dayStartHour]);
 
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (e) => {
@@ -112,7 +110,7 @@ export default function TimelineView() {
       if (!block) return;
 
       const durationMs = new Date(block.endTime).getTime() - new Date(block.startTime).getTime();
-      const newStart = topOffsetToDate(newTopOffset, selectedDate);
+      const newStart = topOffsetToDate(newTopOffset, selectedDate, dayStartHour);
       const newEnd = new Date(newStart.getTime() + durationMs);
 
       updateTimeBlock(blockId, {
@@ -120,7 +118,7 @@ export default function TimelineView() {
         endTime: newEnd.toISOString(),
       });
     },
-    [timeBlocks, selectedDate, updateTimeBlock],
+    [timeBlocks, selectedDate, updateTimeBlock, dayStartHour],
   );
 
   // Commit a resize: compute new endTime from pixel height
@@ -129,15 +127,15 @@ export default function TimelineView() {
       const block = timeBlocks.find((b) => b.id === blockId);
       if (!block) return;
 
-      const { topOffset } = getBlockPosition(block);
+      const { topOffset } = getBlockPosition(block, dayStartHour);
       const newEndOffset = topOffset + newHeight;
-      const newEnd = topOffsetToDate(newEndOffset, selectedDate);
+      const newEnd = topOffsetToDate(newEndOffset, selectedDate, dayStartHour);
 
       updateTimeBlock(blockId, {
         endTime: newEnd.toISOString(),
       });
     },
-    [timeBlocks, selectedDate, updateTimeBlock],
+    [timeBlocks, selectedDate, updateTimeBlock, dayStartHour],
   );
 
   const handleQuickAdd = useCallback(() => {
@@ -158,7 +156,7 @@ export default function TimelineView() {
     startTime.setHours(startHour, startMinute, 0, 0);
 
     const endTime = new Date(startTime);
-    endTime.setMinutes(endTime.getMinutes() + Config.defaultTaskDuration);
+    endTime.setMinutes(endTime.getMinutes() + defaultTaskDuration);
 
     const colorMap: Record<TimeBlockType, string> = {
       task: Colors.timeBlockTask,
@@ -179,7 +177,7 @@ export default function TimelineView() {
 
     addTimeBlock(block);
     setModalVisible(false);
-  }, [newTitle, newType, selectedDate, addTimeBlock]);
+  }, [newTitle, newType, selectedDate, addTimeBlock, defaultTaskDuration]);
 
   const typeOptions: { value: TimeBlockType; label: string }[] = [
     { value: 'task', label: 'Task' },
@@ -188,7 +186,7 @@ export default function TimelineView() {
     { value: 'focus', label: 'Focus' },
   ];
 
-  const totalHeight = TOTAL_HOURS * HOUR_HEIGHT;
+  const totalHeight = totalHours * HOUR_HEIGHT;
   const hasBlocks = todayBlocks.length > 0;
 
   return (
@@ -203,13 +201,13 @@ export default function TimelineView() {
         scrollEventThrottle={16}
       >
         {/* Hour grid */}
-        {Array.from({ length: TOTAL_HOURS }, (_, i) => (
-          <HourMarker key={START_HOUR + i} hour={START_HOUR + i} />
+        {Array.from({ length: totalHours }, (_, i) => (
+          <HourMarker key={dayStartHour + i} hour={dayStartHour + i} />
         ))}
 
         {/* Time blocks (draggable) */}
         {todayBlocks.map((block) => {
-          const { topOffset, height } = getBlockPosition(block);
+          const { topOffset, height } = getBlockPosition(block, dayStartHour);
           return (
             <DraggableTimeBlock
               key={block.id}
@@ -226,7 +224,7 @@ export default function TimelineView() {
 
         {/* Calendar events (read-only overlay) */}
         {todayEvents.map((event) => {
-          const { topOffset, height } = getEventPosition(event);
+          const { topOffset, height } = getEventPosition(event, dayStartHour);
           const eventHasConflict = conflicts.some(
             (c) => c.calendarEventId === event.id,
           );
@@ -242,7 +240,7 @@ export default function TimelineView() {
         })}
 
         {/* Current time indicator */}
-        <CurrentTimeIndicator startHour={START_HOUR} />
+        <CurrentTimeIndicator startHour={dayStartHour} />
 
         {/* Empty state */}
         {!hasBlocks && (
