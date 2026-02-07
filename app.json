@@ -29,7 +29,20 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#4F46E5"
+        }
+      ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "DayDeck needs access to your calendars to show events on the timeline."
+        }
+      ]
     ]
   }
 }
