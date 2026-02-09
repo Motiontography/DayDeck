@@ -31,6 +31,7 @@ export interface Task {
   status: TaskStatus;
   priority: Priority;
   scheduledDate: string; // ISO date "YYYY-MM-DD" (user's local day)
+  scheduledTime: string | null; // "HH:mm" (24-hour) or null for all-day tasks
   estimatedMinutes: number | null;
   subtasks: Subtask[];
   recurrence: Recurrence | null;

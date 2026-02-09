@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-const CURRENT_VERSION = 4;
+const CURRENT_VERSION = 5;
 
 const migrations: Record<number, string[]> = {
   1: [
@@ -66,6 +66,9 @@ const migrations: Record<number, string[]> = {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     )`,
+  ],
+  5: [
+    `ALTER TABLE tasks ADD COLUMN scheduled_time TEXT`,
   ],
 };
 

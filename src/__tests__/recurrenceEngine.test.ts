@@ -9,6 +9,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     status: 'todo',
     priority: 'medium',
     scheduledDate: '2026-01-05', // Monday
+    scheduledTime: null,
     estimatedMinutes: 30,
     subtasks: [],
     recurrence: null,

@@ -1,6 +1,8 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { Colors, Dimensions } from '../../constants';
+import React, { useMemo } from 'react';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { Dimensions } from '../../constants';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../constants/colors';
 import type { CalendarEvent } from '../../types';
 
 interface CalendarEventCardProps {
@@ -8,6 +10,7 @@ interface CalendarEventCardProps {
   topOffset: number;
   height: number;
   hasConflict: boolean;
+  onPress?: (event: CalendarEvent) => void;
 }
 
 function formatTimeRange(startTime: string, endTime: string): string {
@@ -23,14 +26,16 @@ function formatTimeRange(startTime: string, endTime: string): string {
   return `${fmt(start)} - ${fmt(end)}`;
 }
 
-function CalendarEventCard({ event, topOffset, height, hasConflict }: CalendarEventCardProps) {
+function CalendarEventCard({ event, topOffset, height, hasConflict, onPress }: CalendarEventCardProps) {
+  const colors = useTheme();
+  const styles = useStyles(colors);
   const eventColor = event.color || '#8B5CF6';
   const minHeight = 24;
   const displayHeight = Math.max(height, minHeight);
   const isCompact = height < 36;
 
   return (
-    <View
+    <Pressable
       style={[
         styles.container,
         {
@@ -41,7 +46,8 @@ function CalendarEventCard({ event, topOffset, height, hasConflict }: CalendarEv
         },
         hasConflict && styles.conflictBorder,
       ]}
-      accessibilityRole="text"
+      onPress={() => onPress?.(event)}
+      accessibilityRole="button"
       accessibilityLabel={`Calendar event: ${event.title}, ${formatTimeRange(event.startTime, event.endTime)}${hasConflict ? ', conflicts with a scheduled block' : ''}`}
     >
       <View style={styles.contentRow}>
@@ -63,66 +69,68 @@ function CalendarEventCard({ event, topOffset, height, hasConflict }: CalendarEv
           {formatTimeRange(event.startTime, event.endTime)}
         </Text>
       )}
-    </View>
+    </Pressable>
   );
 }
 
 export default React.memo(CalendarEventCard);
 
-const styles = StyleSheet.create({
-  container: {
-    position: 'absolute',
-    left: Dimensions.timelineLeftGutter + 4,
-    right: Dimensions.screenPadding,
-    borderLeftWidth: 3,
-    borderRadius: Dimensions.radiusSmall,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    justifyContent: 'center',
-    borderStyle: 'solid',
-  },
-  conflictBorder: {
-    borderWidth: 1,
-    borderColor: Colors.warning,
-  },
-  contentRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  calendarDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  title: {
-    flex: 1,
-    fontSize: Dimensions.fontSM,
-    fontWeight: '500',
-    color: Colors.textSecondary,
-    fontStyle: 'italic',
-  },
-  titleCompact: {
-    fontSize: Dimensions.fontXS,
-  },
-  time: {
-    fontSize: Dimensions.fontXS,
-    color: Colors.textTertiary,
-    marginTop: 1,
-    marginLeft: 12,
-  },
-  conflictBadge: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: Colors.warning,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  conflictBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '700',
-    lineHeight: 13,
-  },
-});
+function useStyles(colors: ThemeColors) {
+  return useMemo(() => StyleSheet.create({
+    container: {
+      position: 'absolute',
+      left: Dimensions.timelineLeftGutter + 4,
+      right: Dimensions.screenPadding,
+      borderLeftWidth: 3,
+      borderRadius: Dimensions.radiusSmall,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      justifyContent: 'center',
+      borderStyle: 'solid',
+    },
+    conflictBorder: {
+      borderWidth: 1,
+      borderColor: colors.warning,
+    },
+    contentRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    calendarDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+    },
+    title: {
+      flex: 1,
+      fontSize: Dimensions.fontSM,
+      fontWeight: '500',
+      color: colors.textSecondary,
+      fontStyle: 'italic',
+    },
+    titleCompact: {
+      fontSize: Dimensions.fontXS,
+    },
+    time: {
+      fontSize: Dimensions.fontXS,
+      color: colors.textTertiary,
+      marginTop: 1,
+      marginLeft: 12,
+    },
+    conflictBadge: {
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+      backgroundColor: colors.warning,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    conflictBadgeText: {
+      color: '#FFFFFF',
+      fontSize: 11,
+      fontWeight: '700',
+      lineHeight: 13,
+    },
+  }), [colors]);
+}

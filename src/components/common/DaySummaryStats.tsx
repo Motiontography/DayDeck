@@ -1,10 +1,14 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { parseISO, isSameDay } from 'date-fns';
-import { Colors, Dimensions } from '../../constants';
+import { Dimensions } from '../../constants';
 import { useTaskStore, useTimeBlockStore } from '../../store';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../constants/colors';
 
 export default function DaySummaryStats() {
+  const colors = useTheme();
+  const styles = useStyles(colors);
   const selectedDate = useTaskStore((s) => s.selectedDate);
   const tasks = useTaskStore((s) => s.tasks);
   const timeBlocks = useTimeBlockStore((s) => s.timeBlocks);
@@ -103,60 +107,62 @@ export default function DaySummaryStats() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: Dimensions.screenPadding,
-    paddingBottom: 6,
-  },
-  card: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    backgroundColor: Colors.surfaceSecondary,
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  emptyCard: {
-    backgroundColor: Colors.surfaceSecondary,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: Dimensions.fontSM,
-    fontWeight: '500',
-    color: Colors.textTertiary,
-  },
-  celebrationCard: {
-    backgroundColor: Colors.successLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  celebrationEmoji: {
-    fontSize: 16,
-  },
-  celebrationText: {
-    fontSize: Dimensions.fontSM,
-    fontWeight: '700',
-    color: Colors.success,
-  },
-  pill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: Colors.background,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
-  },
-  pillEmoji: {
-    fontSize: 12,
-  },
-  pillText: {
-    fontSize: Dimensions.fontSM,
-    fontWeight: '600',
-    color: Colors.text,
-  },
-});
+function useStyles(colors: ThemeColors) {
+  return useMemo(() => StyleSheet.create({
+    container: {
+      paddingHorizontal: Dimensions.screenPadding,
+      paddingBottom: 6,
+    },
+    card: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+      backgroundColor: colors.surfaceSecondary,
+      borderRadius: 14,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+    },
+    emptyCard: {
+      backgroundColor: colors.surfaceSecondary,
+      borderRadius: 14,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      alignItems: 'center',
+    },
+    emptyText: {
+      fontSize: Dimensions.fontSM,
+      fontWeight: '500',
+      color: colors.textTertiary,
+    },
+    celebrationCard: {
+      backgroundColor: colors.successLight,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    celebrationEmoji: {
+      fontSize: 16,
+    },
+    celebrationText: {
+      fontSize: Dimensions.fontSM,
+      fontWeight: '700',
+      color: colors.success,
+    },
+    pill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: colors.background,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 10,
+    },
+    pillEmoji: {
+      fontSize: 12,
+    },
+    pillText: {
+      fontSize: Dimensions.fontSM,
+      fontWeight: '600',
+      color: colors.text,
+    },
+  }), [colors]);
+}

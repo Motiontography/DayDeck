@@ -20,10 +20,10 @@ import type { ThemeColors } from '../constants/colors';
 // Data
 // ---------------------------------------------------------------------------
 
-const THEME_OPTIONS: { value: ThemeSetting; label: string; icon: string }[] = [
-  { value: 'light', label: 'Light', icon: '\u2600\uFE0F' },
-  { value: 'dark', label: 'Dark', icon: '\uD83C\uDF19' },
-  { value: 'system', label: 'System', icon: '\uD83D\uDCF1' },
+const THEME_OPTIONS: { value: ThemeSetting; label: string; icon: string; desc: string }[] = [
+  { value: 'light', label: 'Light', icon: '\u2600\uFE0F', desc: 'Always light mode' },
+  { value: 'dark', label: 'Dark', icon: '\uD83C\uDF19', desc: 'Always dark mode' },
+  { value: 'system', label: 'System', icon: '\uD83D\uDCF1', desc: 'Matches your phone' },
 ];
 
 const CARRY_OVER_OPTIONS: { value: CarryOverBehavior; label: string; desc: string }[] = [
@@ -118,10 +118,10 @@ export default function SettingsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
-          <Text style={styles.avatarText}>DD</Text>
+          <Text style={styles.avatarIcon}>{'\u{1F4C5}'}</Text>
         </View>
         <Text style={[styles.title, { color: colors.text }]} accessibilityRole="header">
-          Settings
+          DayDeck
         </Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           Customize your planning experience
@@ -169,6 +169,11 @@ export default function SettingsScreen() {
               ))}
             </View>
           </View>
+          {THEME_OPTIONS.find((o) => o.value === theme) && (
+            <Text style={[styles.settingHint, { color: colors.textTertiary }]}>
+              {THEME_OPTIONS.find((o) => o.value === theme)!.desc}
+            </Text>
+          )}
         </View>
 
         {/* ---- Schedule ---- */}
@@ -574,6 +579,9 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 20,
     fontWeight: '700',
+  },
+  avatarIcon: {
+    fontSize: 28,
   },
   title: {
     fontSize: Dimensions.fontTitle,

@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,9 @@ import {
   StyleSheet,
 } from 'react-native';
 import { parseISO, setHours, setMinutes, addMinutes, format } from 'date-fns';
-import { Colors, Dimensions } from '../../constants';
+import { Dimensions } from '../../constants';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../constants/colors';
 import { useTemplateStore, useTaskStore, useTimeBlockStore } from '../../store';
 import { generateId } from '../../utils';
 import type { Template, TimeBlock, TemplateBlock } from '../../types';
@@ -19,14 +21,20 @@ interface TemplateSheetProps {
   onClose: () => void;
 }
 
-const BLOCK_TYPE_COLORS: Record<string, string> = {
-  task: Colors.timeBlockTask,
-  event: Colors.timeBlockEvent,
-  break: Colors.timeBlockBreak,
-  focus: Colors.timeBlockFocus,
-};
+function getBlockTypeColors(colors: ThemeColors): Record<string, string> {
+  return {
+    task: colors.timeBlockTask,
+    event: colors.timeBlockEvent,
+    break: colors.timeBlockBreak,
+    focus: colors.timeBlockFocus,
+  };
+}
 
 export default function TemplateSheet({ visible, onClose }: TemplateSheetProps) {
+  const colors = useTheme();
+  const styles = useStyles(colors);
+  const blockTypeColors = useMemo(() => getBlockTypeColors(colors), [colors]);
+
   const templates = useTemplateStore((s) => s.templates);
   const addTemplate = useTemplateStore((s) => s.addTemplate);
   const deleteTemplate = useTemplateStore((s) => s.deleteTemplate);
@@ -146,7 +154,7 @@ export default function TemplateSheet({ visible, onClose }: TemplateSheetProps) 
                 {
                   left: `${startFraction * 100}%` as unknown as number,
                   width: `${Math.max(widthFraction * 100, 2)}%` as unknown as number,
-                  backgroundColor: BLOCK_TYPE_COLORS[block.type] || block.color,
+                  backgroundColor: blockTypeColors[block.type] || block.color,
                 },
               ]}
             />
@@ -271,168 +279,170 @@ function formatHourMinute(h: number, m: number): string {
   return `${hour12}:${m.toString().padStart(2, '0')}${period}`;
 }
 
-const styles = StyleSheet.create({
-  sheet: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Dimensions.screenPadding,
-    paddingTop: 20,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-  },
-  headerTitle: {
-    fontSize: Dimensions.fontXL,
-    fontWeight: '800',
-    color: Colors.text,
-  },
-  closeButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
-  },
-  closeButtonPressed: {
-    backgroundColor: Colors.surfaceTertiary,
-  },
-  closeText: {
-    fontSize: Dimensions.fontMD,
-    fontWeight: '700',
-    color: Colors.primary,
-  },
-  scrollArea: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: Dimensions.screenPadding,
-    gap: 12,
-  },
-  templateCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    gap: 10,
-  },
-  templateHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  templateIcon: {
-    fontSize: 28,
-  },
-  templateInfo: {
-    flex: 1,
-  },
-  templateName: {
-    fontSize: Dimensions.fontLG,
-    fontWeight: '700',
-    color: Colors.text,
-  },
-  templateMeta: {
-    fontSize: Dimensions.fontXS,
-    fontWeight: '500',
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  previewContainer: {
-    height: 8,
-    backgroundColor: Colors.surfaceTertiary,
-    borderRadius: 4,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  previewBlock: {
-    position: 'absolute',
-    top: 0,
-    height: 8,
-    borderRadius: 2,
-    opacity: 0.85,
-  },
-  templateActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  applyButton: {
-    flex: 1,
-    backgroundColor: Colors.primary,
-    paddingVertical: 10,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  applyButtonPressed: {
-    backgroundColor: Colors.primaryDark,
-  },
-  applyText: {
-    fontSize: Dimensions.fontMD,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  deleteButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: Colors.errorLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  deleteButtonPressed: {
-    opacity: 0.7,
-  },
-  deleteText: {
-    fontSize: Dimensions.fontMD,
-    fontWeight: '600',
-    color: Colors.error,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 48,
-    gap: 8,
-  },
-  emptyIcon: {
-    fontSize: 48,
-  },
-  emptyTitle: {
-    fontSize: Dimensions.fontLG,
-    fontWeight: '700',
-    color: Colors.text,
-  },
-  emptySubtitle: {
-    fontSize: Dimensions.fontSM,
-    fontWeight: '500',
-    color: Colors.textSecondary,
-    textAlign: 'center',
-  },
-  footer: {
-    padding: Dimensions.screenPadding,
-    paddingBottom: 34,
-    borderTopWidth: 1,
-    borderTopColor: Colors.borderLight,
-  },
-  saveButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: Colors.primaryMuted,
-    paddingVertical: 14,
-    borderRadius: 14,
-  },
-  saveButtonPressed: {
-    backgroundColor: Colors.primaryLight + '30',
-  },
-  saveIcon: {
-    fontSize: 16,
-  },
-  saveText: {
-    fontSize: Dimensions.fontMD,
-    fontWeight: '700',
-    color: Colors.primary,
-  },
-});
+function useStyles(colors: ThemeColors) {
+  return useMemo(() => StyleSheet.create({
+    sheet: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: Dimensions.screenPadding,
+      paddingTop: 20,
+      paddingBottom: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.borderLight,
+    },
+    headerTitle: {
+      fontSize: Dimensions.fontXL,
+      fontWeight: '800',
+      color: colors.text,
+    },
+    closeButton: {
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 10,
+    },
+    closeButtonPressed: {
+      backgroundColor: colors.surfaceTertiary,
+    },
+    closeText: {
+      fontSize: Dimensions.fontMD,
+      fontWeight: '700',
+      color: colors.primary,
+    },
+    scrollArea: {
+      flex: 1,
+    },
+    scrollContent: {
+      padding: Dimensions.screenPadding,
+      gap: 12,
+    },
+    templateCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 10,
+    },
+    templateHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    templateIcon: {
+      fontSize: 28,
+    },
+    templateInfo: {
+      flex: 1,
+    },
+    templateName: {
+      fontSize: Dimensions.fontLG,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    templateMeta: {
+      fontSize: Dimensions.fontXS,
+      fontWeight: '500',
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    previewContainer: {
+      height: 8,
+      backgroundColor: colors.surfaceTertiary,
+      borderRadius: 4,
+      overflow: 'hidden',
+      position: 'relative',
+    },
+    previewBlock: {
+      position: 'absolute',
+      top: 0,
+      height: 8,
+      borderRadius: 2,
+      opacity: 0.85,
+    },
+    templateActions: {
+      flexDirection: 'row',
+      gap: 8,
+    },
+    applyButton: {
+      flex: 1,
+      backgroundColor: colors.primary,
+      paddingVertical: 10,
+      borderRadius: 12,
+      alignItems: 'center',
+    },
+    applyButtonPressed: {
+      backgroundColor: colors.primaryDark,
+    },
+    applyText: {
+      fontSize: Dimensions.fontMD,
+      fontWeight: '700',
+      color: '#FFFFFF',
+    },
+    deleteButton: {
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 12,
+      backgroundColor: colors.errorLight,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    deleteButtonPressed: {
+      opacity: 0.7,
+    },
+    deleteText: {
+      fontSize: Dimensions.fontMD,
+      fontWeight: '600',
+      color: colors.error,
+    },
+    emptyState: {
+      alignItems: 'center',
+      paddingVertical: 48,
+      gap: 8,
+    },
+    emptyIcon: {
+      fontSize: 48,
+    },
+    emptyTitle: {
+      fontSize: Dimensions.fontLG,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    emptySubtitle: {
+      fontSize: Dimensions.fontSM,
+      fontWeight: '500',
+      color: colors.textSecondary,
+      textAlign: 'center',
+    },
+    footer: {
+      padding: Dimensions.screenPadding,
+      paddingBottom: 34,
+      borderTopWidth: 1,
+      borderTopColor: colors.borderLight,
+    },
+    saveButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      backgroundColor: colors.primaryMuted,
+      paddingVertical: 14,
+      borderRadius: 14,
+    },
+    saveButtonPressed: {
+      backgroundColor: colors.primaryLight + '30',
+    },
+    saveIcon: {
+      fontSize: 16,
+    },
+    saveText: {
+      fontSize: Dimensions.fontMD,
+      fontWeight: '700',
+      color: colors.primary,
+    },
+  }), [colors]);
+}

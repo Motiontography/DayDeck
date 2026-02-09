@@ -8,6 +8,7 @@ interface TaskRow {
   status: string;
   priority: string;
   scheduled_date: string;
+  scheduled_time: string | null;
   estimated_minutes: number | null;
   sort_order: number;
   recurrence_json: string | null;
@@ -33,6 +34,7 @@ function rowToTask(row: TaskRow, subtasks: Subtask[]): Task {
     status: row.status as TaskStatus,
     priority: row.priority as Priority,
     scheduledDate: row.scheduled_date,
+    scheduledTime: row.scheduled_time ?? null,
     estimatedMinutes: row.estimated_minutes,
     subtasks,
     recurrence: row.recurrence_json ? (JSON.parse(row.recurrence_json) as Recurrence) : null,
@@ -93,16 +95,17 @@ export async function saveTask(db: SQLiteDatabase, task: Task): Promise<void> {
   await db.withExclusiveTransactionAsync(async (txn) => {
     await txn.runAsync(
       `INSERT INTO tasks (
-        id, title, description, status, priority, scheduled_date,
+        id, title, description, status, priority, scheduled_date, scheduled_time,
         estimated_minutes, sort_order, recurrence_json, notifications_json,
         created_at, updated_at, completed_at, carried_over_from
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         title = excluded.title,
         description = excluded.description,
         status = excluded.status,
         priority = excluded.priority,
         scheduled_date = excluded.scheduled_date,
+        scheduled_time = excluded.scheduled_time,
         estimated_minutes = excluded.estimated_minutes,
         sort_order = excluded.sort_order,
         recurrence_json = excluded.recurrence_json,
@@ -117,6 +120,7 @@ export async function saveTask(db: SQLiteDatabase, task: Task): Promise<void> {
         task.status,
         task.priority,
         task.scheduledDate,
+        task.scheduledTime,
         task.estimatedMinutes,
         task.sortOrder,
         task.recurrence ? JSON.stringify(task.recurrence) : null,

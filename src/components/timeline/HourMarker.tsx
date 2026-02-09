@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Colors, Dimensions } from '../../constants';
+import { Dimensions } from '../../constants';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../constants/colors';
 
 interface HourMarkerProps {
   hour: number;
@@ -15,6 +17,8 @@ function formatHourLabel(hour: number): string {
 }
 
 function HourMarker({ hour, isEven }: HourMarkerProps) {
+  const colors = useTheme();
+  const styles = useStyles(colors);
   const label = formatHourLabel(hour);
 
   return (
@@ -34,39 +38,41 @@ function HourMarker({ hour, isEven }: HourMarkerProps) {
 
 export default React.memo(HourMarker);
 
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    height: Dimensions.timelineHourHeight,
-  },
-  containerEven: {
-    backgroundColor: '#F5F7FB',
-  },
-  containerOdd: {
-    backgroundColor: '#FFFFFF',
-  },
-  label: {
-    width: Dimensions.timelineLeftGutter,
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#8B95A9',
-    textAlign: 'right',
-    paddingRight: 12,
-    lineHeight: 14,
-    letterSpacing: 0.3,
-  },
-  lineContainer: {
-    flex: 1,
-    paddingTop: 6,
-  },
-  line: {
-    height: StyleSheet.hairlineWidth,
-  },
-  lineEven: {
-    backgroundColor: '#D8E0EC',
-  },
-  lineOdd: {
-    backgroundColor: '#E8EDF4',
-  },
-});
+function useStyles(colors: ThemeColors) {
+  return useMemo(() => StyleSheet.create({
+    container: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      height: Dimensions.timelineHourHeight,
+    },
+    containerEven: {
+      backgroundColor: colors.surfaceTertiary,
+    },
+    containerOdd: {
+      backgroundColor: colors.surface,
+    },
+    label: {
+      width: Dimensions.timelineLeftGutter,
+      fontSize: 11,
+      fontWeight: '700',
+      color: colors.textTertiary,
+      textAlign: 'right',
+      paddingRight: 12,
+      lineHeight: 14,
+      letterSpacing: 0.3,
+    },
+    lineContainer: {
+      flex: 1,
+      paddingTop: 6,
+    },
+    line: {
+      height: StyleSheet.hairlineWidth,
+    },
+    lineEven: {
+      backgroundColor: colors.timelineHourLine,
+    },
+    lineOdd: {
+      backgroundColor: colors.border,
+    },
+  }), [colors]);
+}

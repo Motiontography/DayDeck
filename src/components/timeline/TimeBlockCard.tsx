@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { Colors, Dimensions } from '../../constants';
+import { Dimensions } from '../../constants';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../constants/colors';
 import type { TimeBlock } from '../../types';
 
 interface TimeBlockCardProps {
@@ -24,7 +26,9 @@ function formatTimeRange(startTime: string, endTime: string): string {
 }
 
 function TimeBlockCard({ block, topOffset, height, onPress }: TimeBlockCardProps) {
-  const blockColor = block.color || Colors.timeBlockTask;
+  const colors = useTheme();
+  const styles = useStyles(colors);
+  const blockColor = block.color || colors.timeBlockTask;
   const minHeight = 28;
   const displayHeight = Math.max(height, minHeight);
   const isCompact = height < 40;
@@ -58,28 +62,30 @@ function TimeBlockCard({ block, topOffset, height, onPress }: TimeBlockCardProps
 
 export default React.memo(TimeBlockCard);
 
-const styles = StyleSheet.create({
-  container: {
-    position: 'absolute',
-    left: Dimensions.timelineLeftGutter + 4,
-    right: Dimensions.screenPadding,
-    borderLeftWidth: 3,
-    borderRadius: Dimensions.radiusSmall,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: Dimensions.fontSM,
-    fontWeight: '600',
-    color: Colors.text,
-  },
-  titleCompact: {
-    fontSize: Dimensions.fontXS,
-  },
-  time: {
-    fontSize: Dimensions.fontXS,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-});
+function useStyles(colors: ThemeColors) {
+  return useMemo(() => StyleSheet.create({
+    container: {
+      position: 'absolute',
+      left: Dimensions.timelineLeftGutter + 4,
+      right: Dimensions.screenPadding,
+      borderLeftWidth: 3,
+      borderRadius: Dimensions.radiusSmall,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      justifyContent: 'center',
+    },
+    title: {
+      fontSize: Dimensions.fontSM,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    titleCompact: {
+      fontSize: Dimensions.fontXS,
+    },
+    time: {
+      fontSize: Dimensions.fontXS,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+  }), [colors]);
+}

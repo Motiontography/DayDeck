@@ -1,6 +1,8 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import { SectionList, StyleSheet, Text, View, Pressable } from 'react-native';
-import { Colors, Dimensions } from '../../constants';
+import { Dimensions } from '../../constants';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../constants/colors';
 import type { Task, TaskStatus, Subtask } from '../../types';
 import TaskCard from './TaskCard';
 
@@ -48,6 +50,9 @@ export default function TaskList({
   onDelete,
   onEdit,
 }: TaskListProps) {
+  const colors = useTheme();
+  const styles = useStyles(colors);
+
   const [doneCollapsed, setDoneCollapsed] = useState(true);
 
   const filteredTasks = useMemo(() => {
@@ -177,99 +182,103 @@ export default function TaskList({
       stickySectionHeadersEnabled={false}
       contentContainerStyle={styles.list}
       showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive"
     />
   );
 }
 
-const styles = StyleSheet.create({
-  list: {
-    paddingHorizontal: Dimensions.screenPadding,
-    paddingBottom: 100,
-  },
-  sectionHeader: {
-    paddingTop: 16,
-    paddingBottom: 8,
-  },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  sectionTitle: {
-    fontSize: Dimensions.fontSM,
-    fontWeight: '700',
-    color: Colors.textSecondary,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
-  sectionCountBadge: {
-    backgroundColor: Colors.surfaceTertiary,
-    paddingHorizontal: 7,
-    paddingVertical: 1,
-    borderRadius: 10,
-  },
-  sectionCount: {
-    fontSize: Dimensions.fontXS,
-    fontWeight: '700',
-    color: Colors.textTertiary,
-  },
-  sectionChevron: {
-    fontSize: 10,
-    color: Colors.textTertiary,
-    marginLeft: 2,
-  },
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Dimensions.screenPadding * 2,
-  },
-  emptyIllustration: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: Colors.primaryMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  emptyIllustrationText: {
-    fontSize: 36,
-  },
-  emptyTitle: {
-    fontSize: Dimensions.fontXL,
-    fontWeight: '800',
-    color: Colors.text,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    fontSize: Dimensions.fontMD,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 21,
-  },
-  emptyIllustrationSmall: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.surfaceTertiary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 14,
-  },
-  emptyIllustrationTextSmall: {
-    fontSize: 26,
-  },
-  emptyFilterTitle: {
-    fontSize: Dimensions.fontLG,
-    fontWeight: '700',
-    color: Colors.text,
-    marginBottom: 4,
-  },
-  emptyFilterSubtitle: {
-    fontSize: Dimensions.fontSM,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-  },
-});
+function useStyles(colors: ThemeColors) {
+  return useMemo(() => StyleSheet.create({
+    list: {
+      paddingHorizontal: Dimensions.screenPadding,
+      paddingBottom: 100,
+    },
+    sectionHeader: {
+      paddingTop: 16,
+      paddingBottom: 8,
+    },
+    sectionHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    sectionTitle: {
+      fontSize: Dimensions.fontSM,
+      fontWeight: '700',
+      color: colors.textSecondary,
+      letterSpacing: 0.5,
+      textTransform: 'uppercase',
+    },
+    sectionCountBadge: {
+      backgroundColor: colors.surfaceTertiary,
+      paddingHorizontal: 7,
+      paddingVertical: 1,
+      borderRadius: 10,
+    },
+    sectionCount: {
+      fontSize: Dimensions.fontXS,
+      fontWeight: '700',
+      color: colors.textTertiary,
+    },
+    sectionChevron: {
+      fontSize: 10,
+      color: colors.textTertiary,
+      marginLeft: 2,
+    },
+    emptyState: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: Dimensions.screenPadding * 2,
+    },
+    emptyIllustration: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: colors.primaryMuted,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 20,
+    },
+    emptyIllustrationText: {
+      fontSize: 36,
+    },
+    emptyTitle: {
+      fontSize: Dimensions.fontXL,
+      fontWeight: '800',
+      color: colors.text,
+      marginBottom: 8,
+      textAlign: 'center',
+    },
+    emptySubtitle: {
+      fontSize: Dimensions.fontMD,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      lineHeight: 21,
+    },
+    emptyIllustrationSmall: {
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: colors.surfaceTertiary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 14,
+    },
+    emptyIllustrationTextSmall: {
+      fontSize: 26,
+    },
+    emptyFilterTitle: {
+      fontSize: Dimensions.fontLG,
+      fontWeight: '700',
+      color: colors.text,
+      marginBottom: 4,
+    },
+    emptyFilterSubtitle: {
+      fontSize: Dimensions.fontSM,
+      color: colors.textSecondary,
+      textAlign: 'center',
+    },
+  }), [colors]);
+}

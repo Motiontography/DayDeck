@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, Text, View, Pressable } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -8,7 +8,9 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { Colors, Dimensions } from '../../constants';
+import { Dimensions } from '../../constants';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../constants/colors';
 import type { TimeBlock, TimeBlockType } from '../../types';
 
 const HOUR_HEIGHT = Dimensions.timelineHourHeight;
@@ -95,7 +97,9 @@ function DraggableTimeBlock({
   onMoveDown,
   onPress,
 }: DraggableTimeBlockProps) {
-  const blockColor = block.color || Colors.timeBlockTask;
+  const colors = useTheme();
+  const styles = useStyles(colors);
+  const blockColor = block.color || colors.timeBlockTask;
   const minDisplayHeight = 52;
   const displayHeight = Math.max(height, minDisplayHeight);
   const isCompact = height < 52;
@@ -343,115 +347,117 @@ function DraggableTimeBlock({
 
 export default React.memo(DraggableTimeBlock);
 
-const styles = StyleSheet.create({
-  container: {
-    position: 'absolute',
-    left: Dimensions.timelineLeftGutter + 4,
-    right: Dimensions.screenPadding,
-    borderLeftWidth: 5,
-    borderRadius: 14,
-    paddingHorizontal: 10,
-    paddingTop: 10,
-    paddingBottom: RESIZE_HANDLE_HEIGHT + 2,
-    justifyContent: 'flex-start',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 8,
-    overflow: 'hidden',
-  },
-  accentBar: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 3,
-    opacity: 0.6,
-  },
-  conflictBorder: {
-    borderWidth: 1.5,
-    borderColor: Colors.warning,
-  },
-  contentRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-  },
-  iconBubble: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 1,
-  },
-  typeIconText: {
-    fontSize: 14,
-  },
-  textContent: {
-    flex: 1,
-  },
-  title: {
-    fontSize: Dimensions.fontMD,
-    fontWeight: '700',
-    color: Colors.text,
-    letterSpacing: -0.2,
-  },
-  titleCompact: {
-    fontSize: Dimensions.fontSM,
-  },
-  timeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 3,
-  },
-  time: {
-    fontSize: Dimensions.fontXS,
-    fontWeight: '600',
-    letterSpacing: 0.1,
-  },
-  durationPill: {
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 6,
-  },
-  durationText: {
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  resizeHandle: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: RESIZE_HANDLE_HEIGHT,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  resizeBar: {
-    width: 30,
-    height: 3.5,
-    borderRadius: 2,
-    opacity: 0.45,
-  },
-  moveButtonRow: {
-    flexDirection: 'row',
-    gap: 6,
-    marginTop: 4,
-  },
-  moveButton: {
-    backgroundColor: Colors.surfaceSecondary,
-    borderRadius: Dimensions.radiusSmall,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    minWidth: Dimensions.minTouchTarget,
-    minHeight: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  moveButtonText: {
-    fontSize: Dimensions.fontXS,
-    fontWeight: '600',
-    color: Colors.primary,
-  },
-});
+function useStyles(colors: ThemeColors) {
+  return useMemo(() => StyleSheet.create({
+    container: {
+      position: 'absolute',
+      left: Dimensions.timelineLeftGutter + 4,
+      right: Dimensions.screenPadding,
+      borderLeftWidth: 5,
+      borderRadius: 14,
+      paddingHorizontal: 10,
+      paddingTop: 10,
+      paddingBottom: RESIZE_HANDLE_HEIGHT + 2,
+      justifyContent: 'flex-start',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowRadius: 8,
+      overflow: 'hidden',
+    },
+    accentBar: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      height: 3,
+      opacity: 0.6,
+    },
+    conflictBorder: {
+      borderWidth: 1.5,
+      borderColor: colors.warning,
+    },
+    contentRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 8,
+    },
+    iconBubble: {
+      width: 28,
+      height: 28,
+      borderRadius: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 1,
+    },
+    typeIconText: {
+      fontSize: 14,
+    },
+    textContent: {
+      flex: 1,
+    },
+    title: {
+      fontSize: Dimensions.fontMD,
+      fontWeight: '700',
+      color: colors.text,
+      letterSpacing: -0.2,
+    },
+    titleCompact: {
+      fontSize: Dimensions.fontSM,
+    },
+    timeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginTop: 3,
+    },
+    time: {
+      fontSize: Dimensions.fontXS,
+      fontWeight: '600',
+      letterSpacing: 0.1,
+    },
+    durationPill: {
+      paddingHorizontal: 6,
+      paddingVertical: 1,
+      borderRadius: 6,
+    },
+    durationText: {
+      fontSize: 10,
+      fontWeight: '700',
+    },
+    resizeHandle: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: RESIZE_HANDLE_HEIGHT,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    resizeBar: {
+      width: 30,
+      height: 3.5,
+      borderRadius: 2,
+      opacity: 0.45,
+    },
+    moveButtonRow: {
+      flexDirection: 'row',
+      gap: 6,
+      marginTop: 4,
+    },
+    moveButton: {
+      backgroundColor: colors.surfaceSecondary,
+      borderRadius: Dimensions.radiusSmall,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      minWidth: Dimensions.minTouchTarget,
+      minHeight: 28,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    moveButtonText: {
+      fontSize: Dimensions.fontXS,
+      fontWeight: '600',
+      color: colors.primary,
+    },
+  }), [colors]);
+}

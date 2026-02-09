@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -11,7 +11,9 @@ import Animated, {
   Extrapolation,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { Colors, Dimensions } from '../../constants';
+import { Dimensions } from '../../constants';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../constants/colors';
 import type { Subtask } from '../../types';
 
 const DELETE_THRESHOLD = -70;
@@ -24,6 +26,9 @@ interface SubtaskRowProps {
 }
 
 export default function SubtaskRow({ subtask, onToggle, onRemove }: SubtaskRowProps) {
+  const colors = useTheme();
+  const styles = useStyles(colors);
+
   const translateX = useSharedValue(0);
 
   const doRemove = useCallback(() => {
@@ -107,67 +112,69 @@ export default function SubtaskRow({ subtask, onToggle, onRemove }: SubtaskRowPr
   );
 }
 
-const styles = StyleSheet.create({
-  swipeContainer: {
-    overflow: 'hidden',
-    borderRadius: 8,
-    marginVertical: 2,
-  },
-  deleteReveal: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: Colors.errorLight,
-    justifyContent: 'center',
-    alignItems: 'flex-end',
-    paddingRight: 14,
-    borderRadius: 8,
-  },
-  deleteRevealText: {
-    fontSize: Dimensions.fontXS,
-    fontWeight: '700',
-    color: Colors.error,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-    backgroundColor: Colors.background,
-    borderRadius: 8,
-  },
-  checkboxHitArea: {
-    minWidth: 38,
-    minHeight: 38,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkboxChecked: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  checkmark: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
-    lineHeight: 14,
-  },
-  title: {
-    flex: 1,
-    fontSize: Dimensions.fontMD,
-    fontWeight: '500',
-    color: Colors.text,
-    marginLeft: 6,
-  },
-  titleCompleted: {
-    textDecorationLine: 'line-through',
-    color: Colors.textTertiary,
-  },
-});
+function useStyles(colors: ThemeColors) {
+  return useMemo(() => StyleSheet.create({
+    swipeContainer: {
+      overflow: 'hidden',
+      borderRadius: 8,
+      marginVertical: 2,
+    },
+    deleteReveal: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: colors.errorLight,
+      justifyContent: 'center',
+      alignItems: 'flex-end',
+      paddingRight: 14,
+      borderRadius: 8,
+    },
+    deleteRevealText: {
+      fontSize: Dimensions.fontXS,
+      fontWeight: '700',
+      color: colors.error,
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 8,
+      paddingHorizontal: 4,
+      backgroundColor: colors.background,
+      borderRadius: 8,
+    },
+    checkboxHitArea: {
+      minWidth: 38,
+      minHeight: 38,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    checkbox: {
+      width: 20,
+      height: 20,
+      borderRadius: 6,
+      borderWidth: 2,
+      borderColor: colors.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    checkboxChecked: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    checkmark: {
+      color: '#FFFFFF',
+      fontSize: 12,
+      fontWeight: '700',
+      lineHeight: 14,
+    },
+    title: {
+      flex: 1,
+      fontSize: Dimensions.fontMD,
+      fontWeight: '500',
+      color: colors.text,
+      marginLeft: 6,
+    },
+    titleCompleted: {
+      textDecorationLine: 'line-through',
+      color: colors.textTertiary,
+    },
+  }), [colors]);
+}

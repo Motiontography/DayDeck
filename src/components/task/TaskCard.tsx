@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, Alert } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -11,7 +11,9 @@ import Animated, {
   Extrapolation,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { Colors, Dimensions } from '../../constants';
+import { Dimensions } from '../../constants';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../constants/colors';
 import type { Task, Subtask } from '../../types';
 import { generateId } from '../../utils';
 import PriorityBadge from './PriorityBadge';
@@ -20,13 +22,6 @@ import SubtaskRow from './SubtaskRow';
 
 const DELETE_THRESHOLD = -80;
 const SPRING_CONFIG = { damping: 20, stiffness: 200, mass: 0.5 };
-
-const PRIORITY_ACCENT: Record<string, string> = {
-  low: Colors.priorityLow,
-  medium: Colors.priorityMedium,
-  high: Colors.priorityHigh,
-  urgent: Colors.priorityUrgent,
-};
 
 interface TaskCardProps {
   task: Task;
@@ -49,6 +44,19 @@ export default function TaskCard({
   onDelete,
   onEdit,
 }: TaskCardProps) {
+  const colors = useTheme();
+  const styles = useStyles(colors);
+
+  const priorityAccent: Record<string, string> = useMemo(
+    () => ({
+      low: colors.priorityLow,
+      medium: colors.priorityMedium,
+      high: colors.priorityHigh,
+      urgent: colors.priorityUrgent,
+    }),
+    [colors],
+  );
+
   const [expanded, setExpanded] = useState(false);
   const [newSubtaskText, setNewSubtaskText] = useState('');
   const isDone = task.status === 'done';
@@ -59,13 +67,28 @@ export default function TaskCard({
   const isDeleting = useSharedValue(false);
 
   const handleToggleStatus = useCallback(() => {
-    Haptics.impactAsync(
-      isDone
-        ? Haptics.ImpactFeedbackStyle.Light
-        : Haptics.ImpactFeedbackStyle.Medium,
-    );
-    onToggleStatus(task.id);
-  }, [isDone, onToggleStatus, task.id]);
+    if (isDone) {
+      // Uncompleting — no confirmation needed
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      onToggleStatus(task.id);
+    } else {
+      // Completing — confirm first to prevent accidental taps
+      Alert.alert(
+        'Mark as Complete',
+        `Mark "${task.title}" as done?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Complete',
+            onPress: () => {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              onToggleStatus(task.id);
+            },
+          },
+        ],
+      );
+    }
+  }, [isDone, onToggleStatus, task.id, task.title]);
 
   const triggerDelete = useCallback(() => {
     Alert.alert('Delete Task', 'Are you sure you want to delete this task?', [
@@ -158,7 +181,7 @@ export default function TaskCard({
           <View
             style={[
               styles.accentBar,
-              { backgroundColor: PRIORITY_ACCENT[task.priority] },
+              { backgroundColor: priorityAccent[task.priority] },
             ]}
           />
 
@@ -223,6 +246,13 @@ export default function TaskCard({
                 ) : null}
 
                 <View style={styles.metaRow}>
+                  {task.scheduledTime != null && (
+                    <View style={[styles.metaPill, styles.metaPillTime]}>
+                      <Text style={[styles.metaPillText, styles.metaPillTextTime]}>
+                        {formatScheduledTime(task.scheduledTime)}
+                      </Text>
+                    </View>
+                  )}
                   {task.estimatedMinutes != null && (
                     <View style={styles.metaPill}>
                       <Text style={styles.metaPillText}>
@@ -297,7 +327,7 @@ export default function TaskCard({
                       value={newSubtaskText}
                       onChangeText={setNewSubtaskText}
                       placeholder="Add subtask..."
-                      placeholderTextColor={Colors.textTertiary}
+                      placeholderTextColor={colors.textTertiary}
                       onSubmitEditing={handleAddSubtask}
                       returnKeyType="done"
                       accessibilityLabel="Add a new subtask"
@@ -334,6 +364,15 @@ export default function TaskCard({
   );
 }
 
+function formatScheduledTime(time: string): string {
+  const [hStr, mStr] = time.split(':');
+  const h = parseInt(hStr, 10);
+  const m = parseInt(mStr, 10);
+  const suffix = h >= 12 ? 'PM' : 'AM';
+  const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return m === 0 ? `${hour12} ${suffix}` : `${hour12}:${mStr} ${suffix}`;
+}
+
 function formatRecurrenceLabel(frequency: string, interval: number): string {
   if (interval === 1) {
     const map: Record<string, string> = {
@@ -353,181 +392,189 @@ function formatRecurrenceLabel(frequency: string, interval: number): string {
   return `Every ${interval} ${unit[frequency] || frequency}`;
 }
 
-const styles = StyleSheet.create({
-  swipeContainer: {
-    marginBottom: Dimensions.itemSpacing,
-    borderRadius: 14,
-    overflow: 'hidden',
-  },
-  deleteBackground: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: Colors.error,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'flex-end',
-    paddingRight: 20,
-  },
-  deleteBackgroundContent: {
-    alignItems: 'center',
-    gap: 2,
-  },
-  deleteBackgroundIcon: {
-    fontSize: 20,
-  },
-  deleteBackgroundText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.3,
-  },
-  card: {
-    backgroundColor: Colors.surface,
-    borderRadius: 14,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
-    flexDirection: 'row',
-  },
-  accentBar: {
-    width: 4,
-  },
-  cardInner: {
-    flex: 1,
-  },
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    padding: Dimensions.cardPadding,
-  },
-  checkboxHitArea: {
-    minWidth: 44,
-    minHeight: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkbox: {
-    width: 26,
-    height: 26,
-    borderRadius: 8,
-    borderWidth: 2.5,
-    borderColor: Colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkboxChecked: {
-    backgroundColor: Colors.success,
-    borderColor: Colors.success,
-  },
-  checkmark: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '800',
-    lineHeight: 17,
-  },
-  content: {
-    flex: 1,
-    marginLeft: 6,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  title: {
-    fontSize: Dimensions.fontLG,
-    fontWeight: '600',
-    color: Colors.text,
-    flex: 1,
-  },
-  titleDone: {
-    textDecorationLine: 'line-through',
-    color: Colors.textTertiary,
-  },
-  description: {
-    fontSize: Dimensions.fontSM,
-    color: Colors.textSecondary,
-    marginTop: 4,
-    lineHeight: 17,
-  },
-  descriptionDone: {
-    color: Colors.textTertiary,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginTop: 8,
-  },
-  metaPill: {
-    backgroundColor: Colors.surfaceTertiary,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-  },
-  metaPillText: {
-    fontSize: Dimensions.fontXS,
-    fontWeight: '600',
-    color: Colors.textTertiary,
-  },
-  metaPillSuccess: {
-    backgroundColor: Colors.successLight,
-  },
-  metaPillTextSuccess: {
-    color: Colors.success,
-  },
-  expandHint: {
-    fontSize: 8,
-    color: Colors.textTertiary,
-    textAlign: 'right',
-    marginTop: 4,
-  },
-  subtaskSection: {
-    paddingHorizontal: Dimensions.cardPadding,
-    paddingBottom: Dimensions.cardPadding,
-    borderTopWidth: 1,
-    borderTopColor: Colors.borderLight,
-    marginTop: 2,
-  },
-  inlineAddRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-    gap: 6,
-  },
-  inlineAddInput: {
-    flex: 1,
-    backgroundColor: Colors.surfaceTertiary,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    fontSize: Dimensions.fontSM,
-    color: Colors.text,
-  },
-  inlineAddButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: Colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  inlineAddButtonPressed: {
-    backgroundColor: Colors.primaryDark,
-  },
-  inlineAddButtonDisabled: {
-    backgroundColor: Colors.surfaceTertiary,
-  },
-  inlineAddButtonText: {
-    fontSize: 20,
-    fontWeight: '500',
-    color: '#FFFFFF',
-    lineHeight: 22,
-  },
-  inlineAddButtonTextDisabled: {
-    color: Colors.textTertiary,
-  },
-});
+function useStyles(colors: ThemeColors) {
+  return useMemo(() => StyleSheet.create({
+    swipeContainer: {
+      marginBottom: Dimensions.itemSpacing,
+      borderRadius: 14,
+      overflow: 'hidden',
+    },
+    deleteBackground: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: colors.error,
+      borderRadius: 14,
+      justifyContent: 'center',
+      alignItems: 'flex-end',
+      paddingRight: 20,
+    },
+    deleteBackgroundContent: {
+      alignItems: 'center',
+      gap: 2,
+    },
+    deleteBackgroundIcon: {
+      fontSize: 20,
+    },
+    deleteBackgroundText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: '#FFFFFF',
+      letterSpacing: 0.3,
+    },
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: 14,
+      overflow: 'hidden',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.06,
+      shadowRadius: 6,
+      elevation: 2,
+      flexDirection: 'row',
+    },
+    accentBar: {
+      width: 4,
+    },
+    cardInner: {
+      flex: 1,
+    },
+    topRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      padding: Dimensions.cardPadding,
+    },
+    checkboxHitArea: {
+      minWidth: 44,
+      minHeight: 44,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    checkbox: {
+      width: 26,
+      height: 26,
+      borderRadius: 8,
+      borderWidth: 2.5,
+      borderColor: colors.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    checkboxChecked: {
+      backgroundColor: colors.success,
+      borderColor: colors.success,
+    },
+    checkmark: {
+      color: '#FFFFFF',
+      fontSize: 15,
+      fontWeight: '800',
+      lineHeight: 17,
+    },
+    content: {
+      flex: 1,
+      marginLeft: 6,
+    },
+    titleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 8,
+    },
+    title: {
+      fontSize: Dimensions.fontLG,
+      fontWeight: '600',
+      color: colors.text,
+      flex: 1,
+    },
+    titleDone: {
+      textDecorationLine: 'line-through',
+      color: colors.textTertiary,
+    },
+    description: {
+      fontSize: Dimensions.fontSM,
+      color: colors.textSecondary,
+      marginTop: 4,
+      lineHeight: 17,
+    },
+    descriptionDone: {
+      color: colors.textTertiary,
+    },
+    metaRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 6,
+      marginTop: 8,
+    },
+    metaPill: {
+      backgroundColor: colors.surfaceTertiary,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 8,
+    },
+    metaPillText: {
+      fontSize: Dimensions.fontXS,
+      fontWeight: '600',
+      color: colors.textTertiary,
+    },
+    metaPillTime: {
+      backgroundColor: colors.primary + '18',
+    },
+    metaPillTextTime: {
+      color: colors.primary,
+    },
+    metaPillSuccess: {
+      backgroundColor: colors.successLight,
+    },
+    metaPillTextSuccess: {
+      color: colors.success,
+    },
+    expandHint: {
+      fontSize: 8,
+      color: colors.textTertiary,
+      textAlign: 'right',
+      marginTop: 4,
+    },
+    subtaskSection: {
+      paddingHorizontal: Dimensions.cardPadding,
+      paddingBottom: Dimensions.cardPadding,
+      borderTopWidth: 1,
+      borderTopColor: colors.borderLight,
+      marginTop: 2,
+    },
+    inlineAddRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 8,
+      gap: 6,
+    },
+    inlineAddInput: {
+      flex: 1,
+      backgroundColor: colors.surfaceTertiary,
+      borderRadius: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      fontSize: Dimensions.fontSM,
+      color: colors.text,
+    },
+    inlineAddButton: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    inlineAddButtonPressed: {
+      backgroundColor: colors.primaryDark,
+    },
+    inlineAddButtonDisabled: {
+      backgroundColor: colors.surfaceTertiary,
+    },
+    inlineAddButtonText: {
+      fontSize: 20,
+      fontWeight: '500',
+      color: '#FFFFFF',
+      lineHeight: 22,
+    },
+    inlineAddButtonTextDisabled: {
+      color: colors.textTertiary,
+    },
+  }), [colors]);
+}
