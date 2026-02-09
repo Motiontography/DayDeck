@@ -11,11 +11,15 @@ import {
   isSameDay,
   isSameMonth,
 } from 'date-fns';
-import { Colors, Dimensions } from '../../constants';
+import { Dimensions } from '../../constants';
 import { useTaskStore, useTimeBlockStore } from '../../store';
 import { todayISO } from '../../utils';
+import { useTheme } from '../../theme/ThemeContext';
+import type { ThemeColors } from '../../constants/colors';
 
 export default function WeeklyCalendar() {
+  const colors = useTheme();
+  const styles = useStyles(colors);
   const selectedDate = useTaskStore((s) => s.selectedDate);
   const setSelectedDate = useTaskStore((s) => s.setSelectedDate);
   const tasks = useTaskStore((s) => s.tasks);
@@ -25,7 +29,7 @@ export default function WeeklyCalendar() {
   const todayParsed = parseISO(todayISO());
 
   // Monday-based week
-  const weekStart = startOfWeek(selectedParsed, { weekStartsOn: 1 });
+  const weekStart = startOfWeek(selectedParsed, { weekStartsOn: 0 });
   const weekDays = useMemo(() => {
     return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   }, [weekStart.getTime()]);
@@ -97,11 +101,11 @@ export default function WeeklyCalendar() {
     if (isSelected) return '#FFFFFF';
     switch (status) {
       case 'complete':
-        return Colors.success;
+        return colors.success;
       case 'partial':
-        return Colors.warning;
+        return colors.warning;
       case 'pending':
-        return Colors.textTertiary;
+        return colors.textTertiary;
       default:
         return 'transparent';
     }
@@ -171,72 +175,74 @@ export default function WeeklyCalendar() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: Dimensions.screenPadding,
-    paddingTop: 4,
-    paddingBottom: 6,
-  },
-  monthLabel: {
-    fontSize: Dimensions.fontSM,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: 8,
-    letterSpacing: 0.3,
-  },
-  weekRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 4,
-  },
-  dayCell: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 8,
-    borderRadius: 14,
-    minHeight: Dimensions.minTouchTarget,
-  },
-  todayCell: {
-    borderWidth: 1.5,
-    borderColor: Colors.primary + '40',
-  },
-  selectedCell: {
-    backgroundColor: Colors.primary,
-  },
-  pressedCell: {
-    backgroundColor: Colors.surfaceTertiary,
-  },
-  dayAbbrev: {
-    fontSize: Dimensions.fontXS,
-    fontWeight: '600',
-    color: Colors.textTertiary,
-    letterSpacing: 0.2,
-    marginBottom: 2,
-  },
-  dayNumber: {
-    fontSize: Dimensions.fontLG,
-    fontWeight: '800',
-    color: Colors.text,
-  },
-  todayText: {
-    color: Colors.primary,
-  },
-  todayNumber: {
-    color: Colors.primary,
-  },
-  selectedText: {
-    color: '#FFFFFF',
-  },
-  dotsRow: {
-    flexDirection: 'row',
-    gap: 3,
-    marginTop: 4,
-    height: 5,
-  },
-  dot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-  },
-});
+function useStyles(colors: ThemeColors) {
+  return useMemo(() => StyleSheet.create({
+    container: {
+      paddingHorizontal: Dimensions.screenPadding,
+      paddingTop: 4,
+      paddingBottom: 6,
+    },
+    monthLabel: {
+      fontSize: Dimensions.fontSM,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginBottom: 8,
+      letterSpacing: 0.3,
+    },
+    weekRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      gap: 4,
+    },
+    dayCell: {
+      flex: 1,
+      alignItems: 'center',
+      paddingVertical: 8,
+      borderRadius: 14,
+      minHeight: Dimensions.minTouchTarget,
+    },
+    todayCell: {
+      borderWidth: 1.5,
+      borderColor: colors.primary + '40',
+    },
+    selectedCell: {
+      backgroundColor: colors.primary,
+    },
+    pressedCell: {
+      backgroundColor: colors.surfaceTertiary,
+    },
+    dayAbbrev: {
+      fontSize: Dimensions.fontXS,
+      fontWeight: '600',
+      color: colors.textTertiary,
+      letterSpacing: 0.2,
+      marginBottom: 2,
+    },
+    dayNumber: {
+      fontSize: Dimensions.fontLG,
+      fontWeight: '800',
+      color: colors.text,
+    },
+    todayText: {
+      color: colors.primary,
+    },
+    todayNumber: {
+      color: colors.primary,
+    },
+    selectedText: {
+      color: '#FFFFFF',
+    },
+    dotsRow: {
+      flexDirection: 'row',
+      gap: 3,
+      marginTop: 4,
+      height: 5,
+    },
+    dot: {
+      width: 5,
+      height: 5,
+      borderRadius: 2.5,
+    },
+  }), [colors]);
+}

@@ -1,13 +1,61 @@
 import { create } from 'zustand';
 import type { SQLiteDatabase } from 'expo-sqlite';
-import type { Task, Subtask, TaskStatus } from '../types';
-import { todayISO } from '../utils';
+import type { Task, Subtask, TaskStatus, TimeBlock } from '../types';
+import { todayISO, generateId } from '../utils';
 import { loadAllTasks, saveTask, deleteTaskFromDb } from '../db';
+import { useTimeBlockStore } from './useTimeBlockStore';
 
 let _db: SQLiteDatabase | null = null;
 
-function persistTask(task: Task) {
-  if (_db) saveTask(_db, task).catch(console.error);
+function persistTask(task: Task): Promise<void> {
+  if (_db) return saveTask(_db, task);
+  return Promise.resolve();
+}
+
+/**
+ * Sync a TimeBlock on the timeline for a task with a scheduledTime.
+ * Creates, updates, or deletes the linked TimeBlock as needed.
+ * MUST be called after persistTask has completed to avoid DB lock.
+ */
+function syncTimeBlockForTask(task: Task): void {
+  const tbStore = useTimeBlockStore.getState();
+  const existingBlock = tbStore.timeBlocks.find((b) => b.taskId === task.id);
+
+  if (!task.scheduledTime) {
+    // No time set — remove linked block if it exists
+    if (existingBlock) {
+      tbStore.deleteTimeBlock(existingBlock.id);
+    }
+    return;
+  }
+
+  // Build start/end ISO datetime strings from scheduledDate + scheduledTime
+  const durationMinutes = task.estimatedMinutes ?? 30;
+  const startDate = new Date(`${task.scheduledDate}T${task.scheduledTime}:00`);
+  const endDate = new Date(startDate.getTime() + durationMinutes * 60 * 1000);
+
+  const blockColor = '#818CF8'; // timeBlockTask color
+
+  if (existingBlock) {
+    // Update the existing block
+    tbStore.updateTimeBlock(existingBlock.id, {
+      title: task.title,
+      startTime: startDate.toISOString(),
+      endTime: endDate.toISOString(),
+    });
+  } else {
+    // Create a new TimeBlock linked to the task
+    const newBlock: TimeBlock = {
+      id: generateId(),
+      taskId: task.id,
+      title: task.title,
+      startTime: startDate.toISOString(),
+      endTime: endDate.toISOString(),
+      color: blockColor,
+      type: 'task',
+    };
+    tbStore.addTimeBlock(newBlock);
+  }
 }
 
 interface TaskStoreState {
@@ -19,6 +67,7 @@ interface TaskStoreState {
   addTask: (task: Task) => void;
   updateTask: (id: string, updates: Partial<Task>) => void;
   deleteTask: (id: string) => void;
+  deleteFutureRecurring: (task: Task) => void;
   setTaskStatus: (id: string, status: TaskStatus) => void;
   toggleSubtask: (taskId: string, subtaskId: string) => void;
   addSubtask: (taskId: string, subtask: Subtask) => void;
@@ -39,7 +88,10 @@ export const useTaskStore = create<TaskStoreState>((set, get) => ({
 
   addTask: (task) => {
     set((state) => ({ tasks: [...state.tasks, task] }));
-    persistTask(task);
+    // Serialize: save task first, then sync time block after DB lock is released
+    persistTask(task)
+      .then(() => syncTimeBlockForTask(task))
+      .catch(console.error);
   },
 
   updateTask: (id, updates) => {
@@ -49,12 +101,41 @@ export const useTaskStore = create<TaskStoreState>((set, get) => ({
       ),
     }));
     const updated = get().tasks.find((t) => t.id === id);
-    if (updated) persistTask(updated);
+    if (updated) {
+      // Serialize: save task first, then sync time block after DB lock is released
+      persistTask(updated)
+        .then(() => syncTimeBlockForTask(updated))
+        .catch(console.error);
+    }
   },
 
   deleteTask: (id) => {
+    // Remove any linked TimeBlock before deleting the task
+    const tbStore = useTimeBlockStore.getState();
+    const linkedBlock = tbStore.timeBlocks.find((b) => b.taskId === id);
+    if (linkedBlock) {
+      tbStore.deleteTimeBlock(linkedBlock.id);
+    }
     set((state) => ({ tasks: state.tasks.filter((t) => t.id !== id) }));
     if (_db) deleteTaskFromDb(_db, id).catch(console.error);
+  },
+
+  deleteFutureRecurring: (task) => {
+    const recurrenceKey = JSON.stringify(task.recurrence);
+    const toDelete = get().tasks.filter(
+      (t) =>
+        t.title === task.title &&
+        JSON.stringify(t.recurrence) === recurrenceKey &&
+        t.scheduledDate >= task.scheduledDate,
+    );
+    const tbStore = useTimeBlockStore.getState();
+    for (const t of toDelete) {
+      const linkedBlock = tbStore.timeBlocks.find((b) => b.taskId === t.id);
+      if (linkedBlock) tbStore.deleteTimeBlock(linkedBlock.id);
+      if (_db) deleteTaskFromDb(_db, t.id).catch(console.error);
+    }
+    const deleteIds = new Set(toDelete.map((t) => t.id));
+    set((state) => ({ tasks: state.tasks.filter((t) => !deleteIds.has(t.id)) }));
   },
 
   setTaskStatus: (id, status) => {
@@ -71,7 +152,7 @@ export const useTaskStore = create<TaskStoreState>((set, get) => ({
       ),
     }));
     const updated = get().tasks.find((t) => t.id === id);
-    if (updated) persistTask(updated);
+    if (updated) persistTask(updated).catch(console.error);
   },
 
   toggleSubtask: (taskId, subtaskId) => {
@@ -89,7 +170,7 @@ export const useTaskStore = create<TaskStoreState>((set, get) => ({
       ),
     }));
     const updated = get().tasks.find((t) => t.id === taskId);
-    if (updated) persistTask(updated);
+    if (updated) persistTask(updated).catch(console.error);
   },
 
   addSubtask: (taskId, subtask) => {
@@ -101,7 +182,7 @@ export const useTaskStore = create<TaskStoreState>((set, get) => ({
       ),
     }));
     const updated = get().tasks.find((t) => t.id === taskId);
-    if (updated) persistTask(updated);
+    if (updated) persistTask(updated).catch(console.error);
   },
 
   removeSubtask: (taskId, subtaskId) => {
@@ -117,6 +198,6 @@ export const useTaskStore = create<TaskStoreState>((set, get) => ({
       ),
     }));
     const updated = get().tasks.find((t) => t.id === taskId);
-    if (updated) persistTask(updated);
+    if (updated) persistTask(updated).catch(console.error);
   },
 }));

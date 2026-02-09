@@ -2,12 +2,14 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { format, parseISO } from 'date-fns';
-import { Colors, Dimensions } from '../constants';
+import { Dimensions } from '../constants';
 import { useTaskStore } from '../store';
 import type { Task, TaskStatus, Subtask } from '../types';
 import { TaskList, TaskForm } from '../components/task';
 import { DaySwitcher } from '../components/common';
 import { todayISO } from '../utils';
+import { useTheme } from '../theme/ThemeContext';
+import type { ThemeColors } from '../constants/colors';
 
 type FilterOption = TaskStatus | 'all';
 
@@ -19,11 +21,14 @@ const FILTER_TABS: { key: FilterOption; label: string }[] = [
 ];
 
 export default function TasksScreen() {
+  const colors = useTheme();
+  const styles = useStyles(colors);
   const tasks = useTaskStore((s) => s.tasks);
   const selectedDate = useTaskStore((s) => s.selectedDate);
   const addTask = useTaskStore((s) => s.addTask);
   const updateTask = useTaskStore((s) => s.updateTask);
   const deleteTask = useTaskStore((s) => s.deleteTask);
+  const deleteFutureRecurring = useTaskStore((s) => s.deleteFutureRecurring);
   const setTaskStatus = useTaskStore((s) => s.setTaskStatus);
   const toggleSubtask = useTaskStore((s) => s.toggleSubtask);
   const addSubtask = useTaskStore((s) => s.addSubtask);
@@ -265,6 +270,8 @@ export default function TasksScreen() {
         onClose={handleCloseForm}
         onSubmit={handleAddTask}
         onUpdate={updateTask}
+        onDelete={deleteTask}
+        onDeleteFutureRecurring={deleteFutureRecurring}
         editingTask={editingTask}
         selectedDate={selectedDate}
       />
@@ -272,168 +279,170 @@ export default function TasksScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
+function useStyles(colors: ThemeColors) {
+  return useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
 
-  // Header
-  headerContainer: {
-    backgroundColor: Colors.primaryMuted,
-    paddingHorizontal: Dimensions.screenPadding,
-    paddingTop: 16,
-    paddingBottom: 14,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-  },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  headerTitle: {
-    fontSize: Dimensions.fontTitle,
-    fontWeight: '800',
-    color: Colors.text,
-  },
-  headerDate: {
-    fontSize: Dimensions.fontSM,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  progressArea: {
-    alignItems: 'center',
-  },
-  progressRing: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    borderWidth: 3,
-    borderColor: Colors.primaryLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  progressRingInner: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  progressRingComplete: {
-    // extra styling for 100%
-  },
-  progressNumber: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: Colors.primary,
-  },
-  progressPercentSign: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: Colors.primary,
-    marginTop: 2,
-  },
+    // Header
+    headerContainer: {
+      backgroundColor: colors.primaryMuted,
+      paddingHorizontal: Dimensions.screenPadding,
+      paddingTop: 16,
+      paddingBottom: 14,
+      borderBottomLeftRadius: 20,
+      borderBottomRightRadius: 20,
+    },
+    headerTop: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+    },
+    headerTitle: {
+      fontSize: Dimensions.fontTitle,
+      fontWeight: '800',
+      color: colors.text,
+    },
+    headerDate: {
+      fontSize: Dimensions.fontSM,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    progressArea: {
+      alignItems: 'center',
+    },
+    progressRing: {
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      borderWidth: 3,
+      borderColor: colors.primaryLight,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    progressRingInner: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+    },
+    progressRingComplete: {
+      // extra styling for 100%
+    },
+    progressNumber: {
+      fontSize: 18,
+      fontWeight: '800',
+      color: colors.primary,
+    },
+    progressPercentSign: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: colors.primary,
+      marginTop: 2,
+    },
 
-  // Stats
-  statsRow: {
-    marginTop: 12,
-  },
-  progressBarTrack: {
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.primaryLight + '60',
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.primary,
-  },
-  progressBarComplete: {
-    backgroundColor: Colors.success,
-  },
-  statsText: {
-    fontSize: Dimensions.fontXS,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-    marginTop: 6,
-  },
+    // Stats
+    statsRow: {
+      marginTop: 12,
+    },
+    progressBarTrack: {
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: colors.primaryLight + '60',
+      overflow: 'hidden',
+    },
+    progressBarFill: {
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: colors.primary,
+    },
+    progressBarComplete: {
+      backgroundColor: colors.success,
+    },
+    statsText: {
+      fontSize: Dimensions.fontXS,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      marginTop: 6,
+    },
 
-  // Filter tabs
-  filterContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: Dimensions.screenPadding,
-    paddingVertical: 10,
-    gap: 6,
-  },
-  filterTab: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 20,
-    backgroundColor: Colors.surfaceTertiary,
-    gap: 5,
-  },
-  filterTabActive: {
-    backgroundColor: Colors.primary,
-  },
-  filterTabText: {
-    fontSize: Dimensions.fontSM,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-  },
-  filterTabTextActive: {
-    color: '#FFFFFF',
-  },
-  filterBadge: {
-    backgroundColor: Colors.border,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 8,
-    minWidth: 20,
-    alignItems: 'center',
-  },
-  filterBadgeActive: {
-    backgroundColor: 'rgba(255,255,255,0.3)',
-  },
-  filterBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: Colors.textTertiary,
-  },
-  filterBadgeTextActive: {
-    color: '#FFFFFF',
-  },
+    // Filter tabs
+    filterContainer: {
+      flexDirection: 'row',
+      paddingHorizontal: Dimensions.screenPadding,
+      paddingVertical: 10,
+      gap: 6,
+    },
+    filterTab: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 12,
+      paddingVertical: 7,
+      borderRadius: 20,
+      backgroundColor: colors.surfaceTertiary,
+      gap: 5,
+    },
+    filterTabActive: {
+      backgroundColor: colors.primary,
+    },
+    filterTabText: {
+      fontSize: Dimensions.fontSM,
+      fontWeight: '600',
+      color: colors.textSecondary,
+    },
+    filterTabTextActive: {
+      color: '#FFFFFF',
+    },
+    filterBadge: {
+      backgroundColor: colors.border,
+      paddingHorizontal: 6,
+      paddingVertical: 1,
+      borderRadius: 8,
+      minWidth: 20,
+      alignItems: 'center',
+    },
+    filterBadgeActive: {
+      backgroundColor: 'rgba(255,255,255,0.3)',
+    },
+    filterBadgeText: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: colors.textTertiary,
+    },
+    filterBadgeTextActive: {
+      color: '#FFFFFF',
+    },
 
-  // FAB
-  fab: {
-    position: 'absolute',
-    bottom: 24,
-    right: 24,
-    width: 62,
-    height: 62,
-    borderRadius: 31,
-    backgroundColor: Colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 8,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-  },
-  fabPressed: {
-    backgroundColor: Colors.primaryDark,
-    transform: [{ scale: 0.93 }],
-  },
-  fabIcon: {
-    fontSize: 32,
-    color: '#FFFFFF',
-    fontWeight: '300',
-    lineHeight: 34,
-  },
-  fabIconPressed: {
-    transform: [{ rotate: '45deg' }],
-  },
-});
+    // FAB
+    fab: {
+      position: 'absolute',
+      bottom: 24,
+      right: 24,
+      width: 62,
+      height: 62,
+      borderRadius: 31,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      elevation: 8,
+      shadowColor: colors.primary,
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.4,
+      shadowRadius: 12,
+    },
+    fabPressed: {
+      backgroundColor: colors.primaryDark,
+      transform: [{ scale: 0.93 }],
+    },
+    fabIcon: {
+      fontSize: 32,
+      color: '#FFFFFF',
+      fontWeight: '300',
+      lineHeight: 34,
+    },
+    fabIconPressed: {
+      transform: [{ rotate: '45deg' }],
+    },
+  }), [colors]);
+}
