@@ -6,4 +6,5 @@ export const Defaults = {
   quietHoursEnd: '07:00',
   carryOverBehavior: 'auto' as const,
   reminderOffsetMinutes: 15,
+  calendarSyncEnabled: false,
 } as const;

@@ -9,6 +9,7 @@ export type {
   TimeBlockType,
   TimeBlock,
   CalendarEvent,
+  DeviceReminder,
   DayPlan,
   TemplateBlock,
   Template,

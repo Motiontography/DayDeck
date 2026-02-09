@@ -64,6 +64,17 @@ export interface CalendarEvent {
   color: string;
 }
 
+export interface DeviceReminder {
+  id: string;
+  title: string;
+  notes: string | null;
+  dueDate: string | null; // ISO datetime
+  startDate: string | null; // ISO datetime
+  completed: boolean;
+  calendarId: string;
+  color: string;
+}
+
 export interface DayPlan {
   date: string; // ISO date string (YYYY-MM-DD)
   wakeTime: string; // "07:00"

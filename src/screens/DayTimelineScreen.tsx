@@ -1,12 +1,12 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { parseISO, startOfDay, endOfDay, format } from 'date-fns';
+import { parseISO, startOfDay, endOfDay, startOfWeek, endOfWeek, format } from 'date-fns';
 import { Dimensions } from '../constants';
 import { TimelineView, TemplateSheet } from '../components/timeline';
 import { WeeklyCalendar, DaySummaryStats, MonthCalendar, WeekView } from '../components/common';
 import { useCalendar } from '../hooks/useCalendar';
-import { useCalendarStore, useTaskStore } from '../store';
+import { useCalendarStore, useTaskStore, useSettingsStore } from '../store';
 import { useTheme } from '../theme/ThemeContext';
 import type { ThemeColors } from '../constants/colors';
 
@@ -18,25 +18,58 @@ export default function DayTimelineScreen() {
   const insets = useSafeAreaInsets();
   const selectedDate = useTaskStore((s) => s.selectedDate);
   const setCalendarEvents = useCalendarStore((s) => s.setCalendarEvents);
+  const setReminders = useCalendarStore((s) => s.setReminders);
+  const calendarSyncEnabled = useSettingsStore((s) => s.calendarSyncEnabled);
   const calendarEnabled = useCalendarStore((s) => s.calendarEnabled);
-  const { events, hasPermission, loading, requestPermission, fetchEvents } = useCalendar();
+  const {
+    events,
+    reminders,
+    hasCalendarPermission,
+    hasRemindersPermission,
+    loading,
+    requestPermissions,
+    fetchEvents,
+    fetchReminders,
+  } = useCalendar();
   const [templateSheetVisible, setTemplateSheetVisible] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('day');
 
   const dayName = format(parseISO(selectedDate), 'EEEE');
   const dateLabel = format(parseISO(selectedDate), 'MMMM d, yyyy');
 
+  // Sync calendar enabled setting to store
   useEffect(() => {
-    if (hasPermission && calendarEnabled) {
-      const dayStart = startOfDay(parseISO(selectedDate));
-      const dayEnd = endOfDay(parseISO(selectedDate));
-      fetchEvents(dayStart, dayEnd);
+    useCalendarStore.getState().setCalendarEnabled(calendarSyncEnabled);
+  }, [calendarSyncEnabled]);
+
+  // Fetch events for the current week (broader range than single day)
+  useEffect(() => {
+    if (hasCalendarPermission && calendarSyncEnabled) {
+      const parsed = parseISO(selectedDate);
+      const weekStart = startOfWeek(parsed, { weekStartsOn: 0 });
+      const weekEnd = endOfWeek(parsed, { weekStartsOn: 0 });
+      fetchEvents(startOfDay(weekStart), endOfDay(weekEnd));
     }
-  }, [selectedDate, hasPermission, calendarEnabled, fetchEvents]);
+  }, [selectedDate, hasCalendarPermission, calendarSyncEnabled, fetchEvents]);
+
+  // Fetch reminders for a 30-day window around the selected date
+  useEffect(() => {
+    if (hasRemindersPermission && calendarSyncEnabled) {
+      const parsed = parseISO(selectedDate);
+      const rangeStart = startOfDay(parsed);
+      const rangeEnd = new Date(rangeStart);
+      rangeEnd.setDate(rangeEnd.getDate() + 30);
+      fetchReminders(rangeStart, rangeEnd);
+    }
+  }, [selectedDate, hasRemindersPermission, calendarSyncEnabled, fetchReminders]);
 
   useEffect(() => {
     setCalendarEvents(events);
   }, [events, setCalendarEvents]);
+
+  useEffect(() => {
+    setReminders(reminders);
+  }, [reminders, setReminders]);
 
   return (
     <View style={styles.container}>
@@ -61,15 +94,15 @@ export default function DayTimelineScreen() {
             <Text style={styles.templateButtonText}>Templates</Text>
           </Pressable>
         </View>
-        {!hasPermission && calendarEnabled && (
+        {!hasCalendarPermission && calendarSyncEnabled && (
           <Pressable
-            onPress={requestPermission}
+            onPress={requestPermissions}
             style={styles.calendarPrompt}
             accessibilityRole="button"
-            accessibilityLabel="Enable calendar sync"
+            accessibilityLabel="Enable calendar and reminders sync"
           >
             <Text style={styles.calendarPromptIcon}>{'\u{1F4C5}'}</Text>
-            <Text style={styles.calendarPromptText}>Sync Calendar</Text>
+            <Text style={styles.calendarPromptText}>Sync Calendar & Reminders</Text>
           </Pressable>
         )}
         {loading && <Text style={styles.loadingText}>Syncing...</Text>}

@@ -40,7 +40,8 @@
       [
         "expo-calendar",
         {
-          "calendarPermission": "DayDeck needs access to your calendars to show events on the timeline."
+          "calendarPermission": "DayDeck needs access to your calendars to show events on the timeline.",
+          "remindersPermission": "DayDeck needs access to your reminders to show them in your daily plan."
         }
       ]
     ]

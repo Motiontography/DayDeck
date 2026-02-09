@@ -50,8 +50,8 @@ export default function SettingsScreen() {
   const theme = useSettingsStore((s) => s.theme);
   const updateSetting = useSettingsStore((s) => s.updateSetting);
 
+  const calendarSyncEnabled = useSettingsStore((s) => s.calendarSyncEnabled);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [calendarSyncEnabled, setCalendarSyncEnabled] = useState(false);
 
   const s = useStyles(colors);
 
@@ -101,6 +101,7 @@ export default function SettingsScreen() {
             updateSetting('carryOverBehavior', 'auto');
             updateSetting('reminderOffsetMinutes', 15);
             updateSetting('theme', 'system');
+            updateSetting('calendarSyncEnabled', false);
           },
         },
       ],
@@ -379,7 +380,7 @@ export default function SettingsScreen() {
             </View>
             <Switch
               value={calendarSyncEnabled}
-              onValueChange={setCalendarSyncEnabled}
+              onValueChange={(v) => updateSetting('calendarSyncEnabled', v)}
               trackColor={{ false: colors.surfaceTertiary, true: colors.primary + '60' }}
               thumbColor={calendarSyncEnabled ? colors.primary : colors.textTertiary}
               ios_backgroundColor={colors.surfaceTertiary}
@@ -389,7 +390,7 @@ export default function SettingsScreen() {
             <>
               <Divider colors={colors} />
               <Text style={[styles.settingHint, { color: colors.textTertiary, paddingVertical: 8 }]}>
-                Calendar events will appear on your timeline as reference blocks.
+                Calendar events and iOS Reminders will appear on your timeline. Anything you add via Siri or the native apps will show up automatically.
               </Text>
             </>
           )}

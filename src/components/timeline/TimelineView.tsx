@@ -12,10 +12,11 @@ import { useTheme } from '../../theme/ThemeContext';
 import type { ThemeColors } from '../../constants/colors';
 import { useTimeBlockStore, useTaskStore, useCalendarStore, useSettingsStore } from '../../store';
 import { generateId, areSameDay, detectConflicts, hasConflict } from '../../utils';
-import type { TimeBlock, TimeBlockType, CalendarEvent } from '../../types';
+import type { TimeBlock, TimeBlockType, CalendarEvent, DeviceReminder } from '../../types';
 import HourMarker from './HourMarker';
 import DraggableTimeBlock from './DraggableTimeBlock';
 import CalendarEventCard from './CalendarEventCard';
+import ReminderCard from './ReminderCard';
 import CurrentTimeIndicator from './CurrentTimeIndicator';
 import QuickAddButton from './QuickAddButton';
 
@@ -79,6 +80,16 @@ function getEventPosition(event: CalendarEvent, startHour: number) {
   return { topOffset, height };
 }
 
+function getReminderPosition(reminder: DeviceReminder, startHour: number) {
+  const dateStr = reminder.dueDate || reminder.startDate;
+  if (!dateStr) return { topOffset: 0, height: HOUR_HEIGHT / 2 };
+  const start = new Date(dateStr);
+  const startMinutes = (start.getHours() - startHour) * 60 + start.getMinutes();
+  const topOffset = (startMinutes / 60) * HOUR_HEIGHT;
+  const height = HOUR_HEIGHT / 2; // 30-min default height for reminders
+  return { topOffset, height };
+}
+
 function formatStartTime(date: Date): string {
   const h = date.getHours();
   const m = date.getMinutes();
@@ -115,6 +126,7 @@ export default function TimelineView() {
   const deleteTimeBlock = useTimeBlockStore((s) => s.deleteTimeBlock);
   const moveTimeBlock = useTimeBlockStore((s) => s.moveTimeBlock);
   const calendarEvents = useCalendarStore((s) => s.calendarEvents);
+  const deviceReminders = useCalendarStore((s) => s.reminders);
   const calendarEnabled = useCalendarStore((s) => s.calendarEnabled);
   const dayStartHour = useSettingsStore((s) => s.dayStartHour);
   const dayEndHour = useSettingsStore((s) => s.dayEndHour);
@@ -160,6 +172,14 @@ export default function TimelineView() {
   // Filter calendar events for the selected date
   const todayEvents = calendarEnabled
     ? calendarEvents.filter((e) => areSameDay(e.startTime, selectedDate))
+    : [];
+
+  // Filter reminders for the selected date (by dueDate or startDate)
+  const todayReminders = calendarEnabled
+    ? deviceReminders.filter((r) => {
+        const dateStr = r.dueDate || r.startDate;
+        return dateStr ? areSameDay(dateStr, selectedDate) : false;
+      })
     : [];
 
   // Detect conflicts between time blocks and calendar events
@@ -428,6 +448,21 @@ export default function TimelineView() {
             />
           );
         })}
+
+        {/* Reminders (read-only overlay) */}
+        {todayReminders
+          .filter((r) => r.dueDate || r.startDate) // only show timed reminders
+          .map((reminder) => {
+            const { topOffset, height } = getReminderPosition(reminder, renderStartHour);
+            return (
+              <ReminderCard
+                key={`rem-${reminder.id}`}
+                reminder={reminder}
+                topOffset={topOffset}
+                height={height}
+              />
+            );
+          })}
 
         {/* Current time indicator */}
         <CurrentTimeIndicator startHour={renderStartHour} />

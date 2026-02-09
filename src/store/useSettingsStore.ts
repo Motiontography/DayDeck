@@ -15,6 +15,7 @@ export interface SettingsState {
   carryOverBehavior: CarryOverBehavior;
   reminderOffsetMinutes: number;
   theme: ThemeSetting;
+  calendarSyncEnabled: boolean;
 
   isHydrated: boolean;
   hydrateFromDb: (db: SQLiteDatabase) => Promise<void>;
@@ -31,6 +32,7 @@ export interface EditableSettings {
   carryOverBehavior: CarryOverBehavior;
   reminderOffsetMinutes: number;
   theme: ThemeSetting;
+  calendarSyncEnabled: boolean;
 }
 
 let _db: SQLiteDatabase | null = null;
@@ -44,6 +46,7 @@ const SETTING_KEYS: (keyof EditableSettings)[] = [
   'carryOverBehavior',
   'reminderOffsetMinutes',
   'theme',
+  'calendarSyncEnabled',
 ];
 
 function parseSettingValue(key: keyof EditableSettings, raw: string): EditableSettings[keyof EditableSettings] {
@@ -58,6 +61,8 @@ function parseSettingValue(key: keyof EditableSettings, raw: string): EditableSe
     case 'carryOverBehavior':
     case 'theme':
       return raw;
+    case 'calendarSyncEnabled':
+      return raw === 'true';
     default:
       return raw;
   }
@@ -72,6 +77,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   carryOverBehavior: Defaults.carryOverBehavior,
   reminderOffsetMinutes: Defaults.reminderOffsetMinutes,
   theme: 'system',
+  calendarSyncEnabled: Defaults.calendarSyncEnabled,
 
   isHydrated: false,
 

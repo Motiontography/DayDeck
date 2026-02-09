@@ -18,7 +18,7 @@ import { todayISO } from '../../utils';
 import { useTheme } from '../../theme/ThemeContext';
 import type { ThemeColors } from '../../constants/colors';
 import { TaskForm } from '../task';
-import type { Task, TimeBlock, CalendarEvent } from '../../types';
+import type { Task, TimeBlock, CalendarEvent, DeviceReminder } from '../../types';
 
 function formatBlockTime(startTime: string, endTime: string): string {
   const start = new Date(startTime);
@@ -57,6 +57,7 @@ export default function WeekView() {
   const updateTimeBlock = useTimeBlockStore((s) => s.updateTimeBlock);
   const deleteTimeBlock = useTimeBlockStore((s) => s.deleteTimeBlock);
   const calendarEvents = useCalendarStore((s) => s.calendarEvents);
+  const deviceReminders = useCalendarStore((s) => s.reminders);
   const calendarEnabled = useCalendarStore((s) => s.calendarEnabled);
 
   const selectedParsed = parseISO(selectedDate);
@@ -133,9 +134,17 @@ export default function WeekView() {
           })
         : [];
 
-      return { day, dayStr, dayTasks, dayBlocks, dayCalendarEvents };
+      const dayReminders = calendarEnabled
+        ? deviceReminders.filter((r: DeviceReminder) => {
+            const dateStr = r.dueDate || r.startDate;
+            if (!dateStr) return false;
+            return isSameDay(parseISO(dateStr), day);
+          })
+        : [];
+
+      return { day, dayStr, dayTasks, dayBlocks, dayCalendarEvents, dayReminders };
     });
-  }, [weekDays, tasks, timeBlocks, calendarEvents, calendarEnabled]);
+  }, [weekDays, tasks, timeBlocks, calendarEvents, deviceReminders, calendarEnabled]);
 
   // Handlers
   const handlePressTask = useCallback((task: Task) => {
@@ -212,10 +221,10 @@ export default function WeekView() {
       </GestureDetector>
 
       {/* Day sections */}
-      {weekData.map(({ day, dayStr, dayTasks, dayBlocks, dayCalendarEvents }) => {
+      {weekData.map(({ day, dayStr, dayTasks, dayBlocks, dayCalendarEvents, dayReminders }) => {
         const isSelected = isSameDay(day, selectedParsed);
         const isToday = isSameDay(day, todayParsed);
-        const isEmpty = dayTasks.length === 0 && dayBlocks.length === 0 && dayCalendarEvents.length === 0;
+        const isEmpty = dayTasks.length === 0 && dayBlocks.length === 0 && dayCalendarEvents.length === 0 && dayReminders.length === 0;
 
         return (
           <Pressable
@@ -323,6 +332,33 @@ export default function WeekView() {
                     </View>
                     <Text style={[styles.itemLabel, { color: event.color || '#8B5CF6' }]}>
                       Calendar
+                    </Text>
+                  </View>
+                ))}
+                {/* Reminders */}
+                {dayReminders.map((reminder: DeviceReminder) => (
+                  <View key={`rem-${reminder.id}`} style={styles.item}>
+                    <Text style={{ fontSize: 14, width: 20, textAlign: 'center' }}>
+                      {reminder.completed ? '\u2611' : '\u2610'}
+                    </Text>
+                    <View style={styles.itemContent}>
+                      <Text
+                        style={[
+                          styles.itemTitle,
+                          reminder.completed && styles.itemTitleDone,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {reminder.title}
+                      </Text>
+                      {reminder.dueDate && (
+                        <Text style={styles.itemTime}>
+                          {formatHour(new Date(reminder.dueDate))}
+                        </Text>
+                      )}
+                    </View>
+                    <Text style={[styles.itemLabel, { color: reminder.color || '#FB923C' }]}>
+                      Reminder
                     </Text>
                   </View>
                 ))}

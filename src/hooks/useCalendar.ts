@@ -1,35 +1,52 @@
 import { useEffect, useState, useCallback } from 'react';
 import * as Calendar from 'expo-calendar';
 import { Platform, Alert, Linking } from 'react-native';
-import type { CalendarEvent } from '../types';
+import type { CalendarEvent, DeviceReminder } from '../types';
 
 interface UseCalendarResult {
   events: CalendarEvent[];
-  hasPermission: boolean;
+  reminders: DeviceReminder[];
+  hasCalendarPermission: boolean;
+  hasRemindersPermission: boolean;
   loading: boolean;
   error: string | null;
-  requestPermission: () => Promise<void>;
+  requestPermissions: () => Promise<void>;
   fetchEvents: (startDate: Date, endDate: Date) => Promise<void>;
+  fetchReminders: (startDate: Date, endDate: Date) => Promise<void>;
 }
 
 export function useCalendar(): UseCalendarResult {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [hasPermission, setHasPermission] = useState(false);
+  const [reminders, setReminders] = useState<DeviceReminder[]>([]);
+  const [hasCalendarPermission, setHasCalendarPermission] = useState(false);
+  const [hasRemindersPermission, setHasRemindersPermission] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const requestPermission = useCallback(async () => {
+  const requestPermissions = useCallback(async () => {
     try {
-      const { status } = await Calendar.requestCalendarPermissionsAsync();
-      if (status === 'granted') {
-        setHasPermission(true);
-        setError(null);
+      const { status: calStatus } = await Calendar.requestCalendarPermissionsAsync();
+      if (calStatus === 'granted') {
+        setHasCalendarPermission(true);
       } else {
-        setHasPermission(false);
+        setHasCalendarPermission(false);
+      }
+
+      // Request reminders permission (iOS only)
+      if (Platform.OS === 'ios') {
+        const { status: remStatus } = await Calendar.requestRemindersPermissionsAsync();
+        if (remStatus === 'granted') {
+          setHasRemindersPermission(true);
+        } else {
+          setHasRemindersPermission(false);
+        }
+      }
+
+      if (calStatus !== 'granted') {
         setError('Calendar permission denied');
         Alert.alert(
           'Calendar Access Required',
-          'DayDeck needs access to your calendar to show events on the timeline. You can enable this in Settings.',
+          'DayDeck needs access to your calendar and reminders to show them on the timeline. You can enable this in Settings.',
           [
             { text: 'Cancel', style: 'cancel' },
             {
@@ -38,24 +55,31 @@ export function useCalendar(): UseCalendarResult {
             },
           ],
         );
+      } else {
+        setError(null);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to request permission');
+      setError(err instanceof Error ? err.message : 'Failed to request permissions');
     }
   }, []);
 
-  // Check permission on mount
+  // Check permissions on mount
   useEffect(() => {
-    async function checkPermission() {
-      const { status } = await Calendar.getCalendarPermissionsAsync();
-      setHasPermission(status === 'granted');
+    async function checkPermissions() {
+      const { status: calStatus } = await Calendar.getCalendarPermissionsAsync();
+      setHasCalendarPermission(calStatus === 'granted');
+
+      if (Platform.OS === 'ios') {
+        const { status: remStatus } = await Calendar.getRemindersPermissionsAsync();
+        setHasRemindersPermission(remStatus === 'granted');
+      }
     }
-    checkPermission();
+    checkPermissions();
   }, []);
 
   const fetchEvents = useCallback(
     async (startDate: Date, endDate: Date) => {
-      if (!hasPermission) return;
+      if (!hasCalendarPermission) return;
 
       setLoading(true);
       setError(null);
@@ -89,10 +113,61 @@ export function useCalendar(): UseCalendarResult {
         setLoading(false);
       }
     },
-    [hasPermission],
+    [hasCalendarPermission],
   );
 
-  return { events, hasPermission, loading, error, requestPermission, fetchEvents };
+  const fetchReminders = useCallback(
+    async (startDate: Date, endDate: Date) => {
+      if (!hasRemindersPermission || Platform.OS !== 'ios') return;
+
+      try {
+        const reminderCalendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.REMINDER);
+        const calendarIds = reminderCalendars.map((c) => c.id);
+
+        if (calendarIds.length === 0) {
+          setReminders([]);
+          return;
+        }
+
+        const rawReminders = await Calendar.getRemindersAsync(
+          calendarIds,
+          null, // status filter — null = all
+          startDate,
+          endDate,
+        );
+
+        const mapped: DeviceReminder[] = rawReminders.map((r) => ({
+          id: r.id ?? '',
+          title: r.title || 'Untitled Reminder',
+          notes: r.notes ?? null,
+          dueDate: r.dueDate ? new Date(r.dueDate).toISOString() : null,
+          startDate: r.startDate ? new Date(r.startDate).toISOString() : null,
+          completed: r.completed ?? false,
+          calendarId: r.calendarId || '',
+          color: getReminderCalendarColor(reminderCalendars, r.calendarId),
+        }));
+
+        setReminders(mapped);
+      } catch (err) {
+        // Silently fail for reminders — not critical
+        console.warn('Failed to fetch reminders:', err);
+        setReminders([]);
+      }
+    },
+    [hasRemindersPermission],
+  );
+
+  return {
+    events,
+    reminders,
+    hasCalendarPermission,
+    hasRemindersPermission,
+    loading,
+    error,
+    requestPermissions,
+    fetchEvents,
+    fetchReminders,
+  };
 }
 
 function getCalendarColor(
@@ -102,4 +177,13 @@ function getCalendarColor(
   if (!calendarId) return '#8B5CF6'; // default purple
   const cal = calendars.find((c) => c.id === calendarId);
   return cal?.color || '#8B5CF6';
+}
+
+function getReminderCalendarColor(
+  calendars: Calendar.Calendar[],
+  calendarId: string | undefined,
+): string {
+  if (!calendarId) return '#FB923C'; // default orange for reminders
+  const cal = calendars.find((c) => c.id === calendarId);
+  return cal?.color || '#FB923C';
 }

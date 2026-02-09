@@ -21,7 +21,7 @@ import { todayISO } from '../../utils';
 import { useTheme } from '../../theme/ThemeContext';
 import type { ThemeColors } from '../../constants/colors';
 import { TaskForm } from '../task';
-import type { Task, TimeBlock, CalendarEvent } from '../../types';
+import type { Task, TimeBlock, CalendarEvent, DeviceReminder } from '../../types';
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -62,6 +62,7 @@ export default function MonthCalendar() {
   const updateTimeBlock = useTimeBlockStore((s) => s.updateTimeBlock);
   const deleteTimeBlock = useTimeBlockStore((s) => s.deleteTimeBlock);
   const calendarEvents = useCalendarStore((s) => s.calendarEvents);
+  const deviceReminders = useCalendarStore((s) => s.reminders);
   const calendarEnabled = useCalendarStore((s) => s.calendarEnabled);
 
   const selectedParsed = parseISO(selectedDate);
@@ -241,6 +242,16 @@ export default function MonthCalendar() {
     });
   }, [calendarEvents, calendarEnabled, selectedDate]);
 
+  const selectedDayReminders = useMemo(() => {
+    if (!calendarEnabled) return [];
+    const selParsed3 = parseISO(selectedDate);
+    return deviceReminders.filter((r: DeviceReminder) => {
+      const dateStr = r.dueDate || r.startDate;
+      if (!dateStr) return false;
+      return isSameDay(parseISO(dateStr), selParsed3);
+    });
+  }, [deviceReminders, calendarEnabled, selectedDate]);
+
   const monthLabel = format(displayedMonth, 'MMMM yyyy');
 
   return (
@@ -338,7 +349,7 @@ export default function MonthCalendar() {
         <Text style={styles.dayDetailDate}>
           {format(selectedParsed, 'EEEE, MMMM d')}
         </Text>
-        {selectedDayTasks.length === 0 && selectedDayBlocks.length === 0 && selectedDayCalendarEvents.length === 0 ? (
+        {selectedDayTasks.length === 0 && selectedDayBlocks.length === 0 && selectedDayCalendarEvents.length === 0 && selectedDayReminders.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyStateText}>No tasks or blocks for this day</Text>
           </View>
@@ -432,6 +443,33 @@ export default function MonthCalendar() {
                 </View>
                 <Text style={[styles.taskStatusLabel, { color: event.color || '#8B5CF6' }]}>
                   Calendar
+                </Text>
+              </View>
+            ))}
+            {/* Reminders */}
+            {selectedDayReminders.map((reminder: DeviceReminder) => (
+              <View key={`rem-${reminder.id}`} style={styles.taskItem}>
+                <Text style={{ fontSize: 14, width: 20, textAlign: 'center' }}>
+                  {reminder.completed ? '\u2611' : '\u2610'}
+                </Text>
+                <View style={styles.taskItemContent}>
+                  <Text
+                    style={[
+                      styles.taskTitle,
+                      reminder.completed && styles.taskTitleDone,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {reminder.title}
+                  </Text>
+                  {reminder.dueDate && (
+                    <Text style={styles.taskTime}>
+                      {formatHour(new Date(reminder.dueDate))}
+                    </Text>
+                  )}
+                </View>
+                <Text style={[styles.taskStatusLabel, { color: reminder.color || '#FB923C' }]}>
+                  Reminder
                 </Text>
               </View>
             ))}
